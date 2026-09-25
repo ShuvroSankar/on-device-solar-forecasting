@@ -1,0 +1,93 @@
+"""
+Phase 1: UKPV dataset exploration + preprocessing.
+
+Schema (confirmed from a sample parquet file):
+    ss_id           int32                   --site ID
+    datetime_GMT    datetime64[ns, UTC]     -- timestamp, 5-min resolution
+    generation_Wh   float32                 -- genaration reading
+
+Run in stages:
+
+    python3 preprocess_ukpv.py  --stage inspect
+    python3 preprocess_ukpv.py  --stage filter
+    python3 preprocess_ukpv.py  --stage split
+"""
+
+import argparse
+import glob
+import os
+
+import pandas as pd
+
+DATA_DIR = "./dataset/uk_pv_data/5_minutely"
+METADATA_PATH = "./dataset/uk_pv_data/metadata.csv"
+BAD_DATA_PATH = "./dataset/uk_pv_data/bad_data.csv"
+OUTPUT_DIR = "./processed"
+
+NONZERO_COVERAGE_THRESHHOLD = 0.5   # keep sites with >50% non-zero reading (per D'Aversa et al.)
+
+MAX_GAP_MINUTES  = 30               # forward-fill gaps up to this; longer are left as NaN
+
+def load_all_parquet(pattern=f"{DATA_DIR}/**/*.parquet"):
+    files = sorted(glob.glob(pattern, recursive = True))
+    print(f"Found {len(files)} parquet files")
+    dfs = []
+    for f in files:
+        dfs.append(pd.read_parquet(f))
+    df = pd.concat(dfs, ignore_index=True)
+    print(f"Combined shape: {df.shape}")
+    return df
+def inspect(sample_only = True):
+    """ Stage 1: sanity-check schema, metadata, bad_data and basic stats."""
+    files = sorted(glob.glob(f"{DATA_DIR}/**/*.parquet", recursive = True))
+    print(f"Total parquet files: {len(files)}")
+
+    df = pd.read_parquet(files[0]) if sample_only else load_all_parquet()
+    print("\n--- Sample data ---")
+    print(df.head())
+    print(df.dtypes)
+    print(f"\nUnique sites in this file: {df['ss_id'].nunique()}")
+    if os.path.exists(METADATA_PATH):
+        meta = pd.read_csv(METADATA_PATH)
+        print("\n---metadata.csv---")
+        print(meta.head())
+        print(meta.columns.tolist())
+
+    else:
+        print(f"\n[!] metadat.csv not found at {METADATA_PATH}")
+
+    if os.path.exists(BAD_DATA_PATH):
+        bad = pd.read_csv(BAD_DATA_PATH)
+        print("\n--bad_data.csv--")
+        print(bad.head())
+        print(bad.columns.tolist())
+        print(f"Flagged rows/sites: {len(bad)}")
+    else:
+        print(f"\n[!] bad_data.csv not found at {BAD_DATA_PATH}")
+
+"""
+def filter_and_clean():
+    Stage 2: load full dataset, drop bad sites, filter by non-zero coverage, imput gaps.
+    os.makedirs(OUTpUTS_DIR, exist_ok=True)
+    df = load_all_parquet()
+    
+    # Drop flagged bad sites/reading if bad_data.csv exists
+    if os.path.exists(BAD_DATA_PATH):
+        bad = pd.read_csv(BAD_DATA_PATH)
+        # from the inspect stage - commonly  these are the list of ss_id values to exclude.
+        if "ss_id" in bad.columns:
+            bad_ids = set(bad["ss_id"].unique())
+            before = df["ss_id"].nunique()
+            df = df[-df["ss_id"].isin(bad_ids)]
+            after = df["ss_id"].nunique()
+            print(f"Dropped {before - after} flagged sites (bad_data.csv")
+        else:
+            print(f"[!] bad_data.csv columns are {bad.column.tolist()}"
+                  f"-- update 
+                  
+
+    # Non-zero coverage filter
+    coverage = df.groupby("ss_id")["generation_Wh"].apply(
+        lambda x: (x>0).mean()
+    )
+"""

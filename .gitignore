@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Dataset (public, regenerable via preprocess_ukpv.py -- don't bloat the repo)
+dataset/
+processed/
+
+# Checkpoints -- .pt files can get large; small ones (SmallTCN, tens of KB)
+# are fine to track explicitly if you want them in the repo, but don't
+# blanket-commit a checkpoints/ folder that might later hold bigger files
+# (e.g. TTM checkpoints, which will NOT be small).
+checkpoints/*.pt
+!checkpoints/small_tcn_*.pt
+
+# ESP-IDF / embedded build artifacts
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+
+# STM32CubeIDE build artifacts
+Debug/
+Release/
+*.launch
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor
+*.swp
+*.swo
+
+# Jupyter (if you end up using any notebooks for exploration)
+.ipynb_checkpoints/
+
+# Secrets -- just in case
+.env
+*.token
