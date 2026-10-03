@@ -57,3 +57,16 @@ Thumbs.db
 # Secrets -- just in case
 .env
 *.token
+
+# --- added: large or regenerable artifacts ---
+venv/
+__pycache__/
+*.pyc
+
+exports/
+*.onnx
+*.tflite
+checkpoints/*.ckpt
+
+data/
+*.parquet
