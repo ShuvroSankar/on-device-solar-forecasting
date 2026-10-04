@@ -35,8 +35,14 @@ caveats and open items.
 ## TTM: status
 
 A fine-tuned TTM-R2 checkpoint (70,972 parameters, context=52, forecast=16) exports cleanly to ONNX
-with a verified parity check (max abs diff 0.000001 vs. PyTorch, 16 random samples). TensorFlow
-conversion (`onnx2tf`) and int8 TFLite export are the next step -- not yet done.
+with a verified parity check (max abs diff 0.000001 vs. PyTorch, 16 random samples), converts to a
+float32 TFLite model via `onnx2tf` (parity vs. ONNX: max abs diff 0.000002), and quantizes via
+dynamic-range quantization (int8 weights, float32 activations) to 375.8 KiB, 18% smaller than the
+float32 model (relative max error 0.49% vs. ONNX, 200 real test-split windows). Full int8 and
+int16x8 quantization were both attempted and both fail, for two distinct, isolated, documented
+reasons -- see Key findings below. Still open: whether `esp-tflite-micro` supports dynamic-range
+weight dequantization at inference, and the model's real flash footprint once embedded in an
+ESP-IDF build.
 
 ### TTM checkpoints
 
@@ -76,6 +82,21 @@ ttm_full_finetuned_lr1e-4/               verified TTM checkpoint (see table abov
 debug/check_patch_mixer_shapes.py        diagnostic: confirms TTM's adaptive-patching
                                           layer shapes are correct in eager mode
 debug/check_ttm_checkpoint_paths.py      diagnostic: sanity-loads all three TTM checkpoints
+
+onnx_to_tf_ttm.py                        TTM ONNX -> TF SavedModel / float32 TFLite (onnx2tf), parity-checked
+build_ttm_calibration_data.py            real-data calibration windows (not synthetic noise),
+                                          reproduces the exact train-fit Normalizer
+memory_safe_windows.py                   two-pass window counting/sampling (avoids OOM on
+                                          the full 6.7M-window train split)
+convert_int8_manual.py                   full int8 TFLite conversion attempt -- fails, see below
+inspect_int8_flatbuffer.py               raw flatbuffer weight-byte-by-dtype inspection
+inspect_node70.py                        diagnostic: isolates the failing int8 DIV node
+int8_parity_check.py / isolate_div_crash.py   confirm the int8 failure is structural, not data-dependent
+convert_int16x8_or_fallback.py           int16x8 quantization attempt -- also fails, see below
+convert_dynamic_range.py                 dynamic-range quantization -- works (deployment candidate)
+test_quantized_model.py / verify_float32_runs.py   parity checks used across all TFLite variants
+make_cind_calibration.py, make_freq_token_calibration.py   abandoned onnx2tf -oiqt/-cind
+                                          approach, kept as a documented dead end (see below)
 ```
 
 ## Reproduce
@@ -125,14 +146,44 @@ the tracer. Fix: `dynamo=True` (the `torch.export`-based exporter), which traces
 symbolically. **Always export TTM with `dynamo=True`** -- the legacy tracer silently produces an
 unusable graph for this architecture.
 
+**TTM int8/int16 quantization: both fail, for two distinct, structural reasons.**
+
+- *Full int8* (`TFLITE_BUILTINS_INT8`) converts and loads without error, but crashes on 100% of 200
+  real test-split windows with `tflite/kernels/div.cc:242 data[i] != 0` at the same graph node,
+  regardless of input variance (ruling out a data-dependent cause -- see `isolate_div_crash.py`).
+  Root cause, confirmed via direct node/tensor inspection (`inspect_node70.py`,
+  `inspect_int8_flatbuffer.py`): TTM's Erf/GELU activation decomposes into a rational approximation
+  (`abs`/`sign`/`exp`/`div`/`rsqrt`), and the divisor tensor's real dynamic range (~0 to 7.4) is too
+  wide for int8's 256 levels -- about 77% of its real values quantize down to the exact zero-point,
+  which dequantizes to literal `0.0`. TFLite's int8 `DIV` kernel correctly refuses to divide by a
+  zero-point code. This is structural to the architecture (33 DIV nodes, one per Erf instance, all
+  fail identically), not fixable with more or better calibration data.
+- *int16x8* (`ACTIVATIONS_INT16_WEIGHTS_INT8`, meant to fix the above by giving activations 65,536
+  levels instead of 256) fails for a different reason: the TFLite converter cannot calibrate a
+  `Cast` op's min/max range (`Empty min/max for tensor Cast`), caused by `freq_token`'s int64 path.
+  This is a known TFLite converter limitation, not something a better representative dataset fixes.
+- *Working alternative:* dynamic-range quantization (int8 weights, float32 activations, no
+  calibration data needed) sidesteps both failure modes, since activations are never quantized.
+  375.8 KiB vs. 458.7 KiB float32 (18% smaller -- more modest than SmallTCN's 73%, since only
+  weights shrink). Parity vs. ONNX: max abs diff 0.024185, relative max error 0.49%, Pearson
+  0.999996 (200 real windows) -- real quantization error, not bit-exact like SmallTCN's int8.
+- *Abandoned path, kept for the record:* `onnx2tf`'s own `-oiqt`/`-cind` quantization flags were
+  tried first and abandoned -- `-cind` requires float32 calibration data for every graph input, with
+  no documented way to supply a non-quantized integer input like `freq_token`. Switched to a manual
+  `tf.lite.TFLiteConverter` script instead, which handles mixed input dtypes correctly.
+
 ## Status
 
 - [x] Dataset pipeline
 - [x] SmallTCN trained on solar data
 - [x] int8 deployment on STM32F446RE and ESP32-C6
 - [x] TTM fine-tuned and exported to ONNX (parity-checked)
+- [x] TTM: ONNX -> TensorFlow -> TFLite, with a working quantized candidate (dynamic-range,
+      375.8 KiB, 0.49% relative error vs. ONNX); full int8 and int16x8 both fail for documented
+      structural reasons (see Key findings)
 - [ ] int8 accuracy of SmallTCN on the full test set
-- [ ] TTM: ONNX -> TensorFlow (`onnx2tf`) -> int8 TFLite -> deploy on ESP32-C6
+- [ ] Confirm `esp-tflite-micro` supports dynamic-range quantized ops; measure TTM's real flash
+      footprint once embedded in the ESP-IDF build; deploy on ESP32-C6
 - [ ] Hardware benchmark vs published works (TinyHAR-Net)
 - [ ] Accuracy comparison vs published cloud-side PV forecasting models
 - [ ] MQTT network cost and live dashboard (needs solar panel)
