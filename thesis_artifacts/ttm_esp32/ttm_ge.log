@@ -1,0 +1,345 @@
+Executing action: all (aliases: build)
+Running ninja in directory /Users/shuvrosankar/thesis/esp32_project/build
+Executing "ninja all"...
+[1/9] Performing build step for 'bootloader'
+[1/1] cd /Users/shuvrosankar/thesis/esp32_project/build/bootloader/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /Users/shuvrosankar/thesis/esp32_project/build/bootloader/bootloader.bin
+Bootloader binary size 0x54e0 bytes. 0x2b20 bytes (34%) free.
+[2/9] No install step for 'bootloader'
+[3/9] Completed 'bootloader'
+[4/9] Building CXX object esp-idf/espressif__esp-tflite-micro/CMakeFiles/__idf_espressif__esp-tflite-micro.dir/tensorflow/lite/micro/kernels/gather.cc.obj
+[5/9] Linking C static library esp-idf/espressif__esp-tflite-micro/libespressif__esp-tflite-micro.a
+[6/9] Generating ld/sections.ld
+[7/9] Linking CXX executable small_tcn_solar_esp32.elf
+[8/9] Generating binary image from built executable
+esptool.py v4.12.0
+Creating esp32c6 image...
+Merged 2 ELF sections
+Successfully created esp32c6 image.
+Generated /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+[9/9] cd /Users/shuvrosankar/thesis/esp32_project/build/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/shuvrosankar/thesis/esp32_project/build/partition_table/partition-table.bin /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+small_tcn_solar_esp32.bin binary size 0xc63d0 bytes. Smallest app partition is 0x100000 bytes. 0x39c30 bytes (23%) free.
+Executing action: flash
+Running ninja in directory /Users/shuvrosankar/thesis/esp32_project/build
+Executing "ninja flash"...
+[1/5] cd /Users/shuvrosankar/thesis/esp32_project/build/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/shuvrosankar/thesis/esp32_project/build/partition_table/partition-table.bin /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+small_tcn_solar_esp32.bin binary size 0xc63d0 bytes. Smallest app partition is 0x100000 bytes. 0x39c30 bytes (23%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /Users/shuvrosankar/thesis/esp32_project/build/bootloader/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /Users/shuvrosankar/thesis/esp32_project/build/bootloader/bootloader.bin
+Bootloader binary size 0x54e0 bytes. 0x2b20 bytes (34%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] cd /Users/shuvrosankar/esp/esp-idf/components/esptool_py && /opt/homebrew/bin/cmake -D IDF_PATH=/Users/shuvrosankar/esp/esp-idf -D "SERIAL_TOOL=/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python;;/Users/shuvrosankar/esp/esp-idf/components/esptool_py/esptool/esptool.py;--chip;esp32c6" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/Users/shuvrosankar/thesis/esp32_project/build -P /Users/shuvrosankar/esp/esp-idf/components/esptool_py/run_serial_tool.cmake
+esptool.py --chip esp32c6 -p /dev/cu.usbmodem21101 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x0 bootloader/bootloader.bin 0x10000 small_tcn_solar_esp32.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.12.0
+Serial port /dev/cu.usbmodem21101
+Connecting...
+Chip is ESP32-C6 (QFN40) (revision v0.0)
+Features: Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Unknown Embedded Flash
+Crystal is 40MHz
+USB mode: USB-Serial/JTAG
+MAC: 40:4c:ca:ff:fe:4c:6e:60
+BASE MAC: 40:4c:ca:4c:6e:60
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00000000 to 0x00005fff...
+Flash will be erased from 0x00010000 to 0x000d6fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 21728 bytes to 13113...
+Writing at 0x00000000... (100 %)
+Wrote 21728 bytes (13113 compressed) at 0x00000000 in 0.3 seconds (effective 507.1 kbit/s)...
+Hash of data verified.
+Compressed 811984 bytes to 506890...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001be5e... (6 %)
+Writing at 0x00021f4c... (9 %)
+Writing at 0x000263a9... (12 %)
+Writing at 0x0002a842... (16 %)
+Writing at 0x0002ed00... (19 %)
+Writing at 0x0003319d... (22 %)
+Writing at 0x00037635... (25 %)
+Writing at 0x0003baf4... (29 %)
+Writing at 0x0003ffad... (32 %)
+Writing at 0x0004443b... (35 %)
+Writing at 0x000488fc... (38 %)
+Writing at 0x0004cd8c... (41 %)
+Writing at 0x000512da... (45 %)
+Writing at 0x00055667... (48 %)
+Writing at 0x00059b5c... (51 %)
+Writing at 0x0005e06a... (54 %)
+Writing at 0x0006255b... (58 %)
+Writing at 0x0006a655... (61 %)
+Writing at 0x00077942... (64 %)
+Writing at 0x0008ac5c... (67 %)
+Writing at 0x00093a55... (70 %)
+Writing at 0x0009a9b6... (74 %)
+Writing at 0x000a233b... (77 %)
+Writing at 0x000a850f... (80 %)
+Writing at 0x000af86f... (83 %)
+Writing at 0x000b5a26... (87 %)
+Writing at 0x000bbc69... (90 %)
+Writing at 0x000c1941... (93 %)
+Writing at 0x000c8080... (96 %)
+Writing at 0x000cf8d8... (100 %)
+Wrote 811984 bytes (506890 compressed) at 0x00010000 in 4.1 seconds (effective 1592.0 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 474.1 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...
+--- esp-idf-monitor 1.10.0 on /dev/cu.usbmodem21101 115200
+--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H
+Executing action: monitor
+Running idf_monitor in directory /Users/shuvrosankar/thesis/esp32_project
+Executing "/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/tools/idf_monitor.py -p /dev/cu.usbmodem21101 -b 115200 --toolchain-prefix riscv32-esp-elf- --target esp32c6 --revision 0 --decode-panic backtrace /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.elf -m '/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python' '/Users/shuvrosankar/esp/esp-idf/tools/idf.py' '-p' '/dev/cu.usbmodem21101'"...
+ESP-ROM:esp32c6-20220919
+Build:Sep 19 2022
+rst:0x15 (USB_UART_HPSYS),boot:0xc (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4001a378
+--- 0x4001a378: ets_sha_process in ROM
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875720,len:0x1804
+load:0x4086c110,len:0xe2c
+load:0x4086e610,len:0x2e5c
+entry 0x4086c11a
+[0;32mI (23) boot: ESP-IDF v5.3.1 2nd stage bootloader[0m
+[0;32mI (23) boot: compile time Oct  6 2026 01:58:34[0m
+[0;32mI (24) boot: chip revision: v0.0[0m
+[0;32mI (26) boot.esp32c6: SPI Speed      : 80MHz[0m
+[0;32mI (31) boot.esp32c6: SPI Mode       : DIO[0m
+[0;32mI (35) boot.esp32c6: SPI Flash Size : 2MB[0m
+[0;32mI (40) boot: Enabling RNG early entropy source...[0m
+[0;32mI (45) boot: Partition Table:[0m
+[0;32mI (49) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (56) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (64) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (71) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (79) boot: End of partition table[0m
+[0;32mI (83) esp_image: segment 0: paddr=00010020 vaddr=42040020 size=8001ch (524316) map[0m
+[0;32mI (199) esp_image: segment 1: paddr=00090044 vaddr=40800000 size=07fd4h ( 32724) load[0m
+[0;32mI (208) esp_image: segment 2: paddr=00098020 vaddr=42000020 size=3a17ch (237948) map[0m
+[0;32mI (258) esp_image: segment 3: paddr=000d21a4 vaddr=40807fd4 size=041fch ( 16892) load[0m
+[0;32mI (265) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (266) boot: Disabling RNG early entropy source...[0m
+[0;32mI (280) cpu_start: Unicore app[0m
+[0;32mI (289) cpu_start: Pro cpu start user code[0m
+[0;32mI (289) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (289) app_init: Application information:[0m
+[0;32mI (292) app_init: Project name:     small_tcn_solar_esp32[0m
+[0;32mI (298) app_init: App version:      5fca45e-dirty[0m
+[0;32mI (303) app_init: Compile time:     Oct  6 2026 01:57:46[0m
+[0;32mI (309) app_init: ELF file SHA256:  590599909...[0m
+[0;32mI (314) app_init: ESP-IDF:          v5.3.1[0m
+[0;32mI (319) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (324) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (329) efuse_init: Chip rev:         v0.0[0m
+[0;32mI (334) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (341) heap_init: At 408495A0 len 00033070 (204 KiB): RAM[0m
+[0;32mI (347) heap_init: At 4087C610 len 00002F54 (11 KiB): RAM[0m
+[0;32mI (353) heap_init: At 50000000 len 00003FE8 (15 KiB): RTCRAM[0m
+[0;32mI (360) spi_flash: detected chip: generic[0m
+[0;32mI (364) spi_flash: flash io: dio[0m
+[0;33mW (368) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (381) sleep: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (388) sleep: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (395) coexist: coex firmware version: 4482466[0m
+[0;32mI (400) coexist: coexist rom version 5b8dcfa[0m
+[0;32mI (406) main_task: Started on CPU0[0m
+[0;32mI (406) main_task: Calling app_main()[0m
+
+=== TTM solar model on ESP32-C6 (TFLite Micro, float32) ===
+
+Model loaded OK (schema 3, 469696 bytes)
+Tensors allocated. Arena used: 160152 / 245760 bytes
+Input[0] past_values: type=1 dims=3 (1,1,52)
+Input[1] freq_token : type=4 dims=1 (1)
+Output  prediction : type=1 dims=3 (1,16,1)
+
+GatherEval: node=0x40839ecc input=0x408450b0 coords=0x40845194 output=0x408451a0
+GatherEval: node=0x4083a3ac input=0x40845368 coords=0x40844cfc output=0x40845374
+GatherEval: node=0x40839ecc input=0x408450b0 coords=0x40845194 output=0x408451a0
+
+abort() was called at PC 0x4201840f on core 0
+--- 0x4201840f: float* tflite::micro::GetTensorData<float>(TfLiteEvalTensor*) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/kernel_util.h:77(inlined by) Gather<float, long int> at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:37(inlined by) GatherEval at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:207
+--- Stack dump detected
+Core  0 register dump:
+MEPC    : 0x4080089e  RA      : 0x408050f2  SP      : 0x4084c390  GP      : 0x4080b1e4  
+--- 0x4080089e: panic_abort at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+--- 0x408050f2: __ubsan_include at /Users/shuvrosankar/esp/esp-idf/components/esp_system/ubsan.c:311
+TP      : 0x4084c780  T0      : 0x37363534  T1      : 0x7271706f  T2      : 0x33323130  
+S0/FP   : 0x00000004  S1      : 0x4084c3f4  A0      : 0x4084c3bc  A1      : 0x4084c3f2  
+A2      : 0x00000000  A3      : 0x4084c3e9  A4      : 0x00000001  A5      : 0x40849000  
+A6      : 0x00000000  A7      : 0x76757473  S2      : 0x0000000a  S3      : 0x00000004  
+S4      : 0x00000000  S5      : 0x4204f028  S6      : 0x00000000  S7      : 0x4080d070  
+S8      : 0x00000001  S9      : 0x00000000  S10     : 0x4080d080  S11     : 0x00000010  
+T3      : 0x6e6d6c6b  T4      : 0x6a696867  T5      : 0x66656463  T6      : 0x62613938  
+MSTATUS : 0x00001881  MTVEC   : 0x40800001  MCAUSE  : 0x00000007  MTVAL   : 0x00000000  
+--- 0x40800001: _vector_table at /Users/shuvrosankar/esp/esp-idf/components/riscv/vectors_intc.S:54
+MHARTID : 0x00000000  
+
+--- Backtrace:
+
+
+panic_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+463	    *((volatile int *) 0) = 0; // NOLINT(clang-analyzer-core.NullDereference) should be an invalid operation on targets
+#0  panic_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+#1  0x408050f2 in esp_system_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/port/esp_system_chip.c:92
+#2  0x40809866 in abort () at /Users/shuvrosankar/esp/esp-idf/components/newlib/abort.c:38
+#3  0x42018412 in tflite::micro::GetTensorData<float> (tensor=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/kernel_util.h:77
+#4  tflite::(anonymous namespace)::Gather<float, long> (output=<optimized out>, coords=<optimized out>, input=<optimized out>, params=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:37
+#5  tflite::(anonymous namespace)::GatherEval (context=<optimized out>, node=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:207
+#6  0x42029b70 in tflite::MicroInterpreterGraph::InvokeSubgraph (this=this@entry=0x4080cd2c <app_main::static_interpreter+112>, subgraph_idx=subgraph_idx@entry=0) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/micro_interpreter_graph.cc:277
+#7  0x4200d1ea in tflite::MicroInterpreter::Invoke (this=this@entry=0x4080ccbc <app_main::static_interpreter>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/micro_interpreter.cc:294
+#8  0x4200b598 in app_main () at /Users/shuvrosankar/thesis/esp32_project/main/main_ttm.cpp:121
+#9  0x42039d82 in main_task (args=<error reading variable: value has been optimized out>) at /Users/shuvrosankar/esp/esp-idf/components/freertos/app_startup.c:208
+#10 0x40805d4a in vPortTaskWrapper (pxCode=<optimized out>, pvParameters=<optimized out>) at /Users/shuvrosankar/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/riscv/port.c:255
+
+
+
+ELF file SHA256: 590599909
+
+Rebooting...
+ESP-ROM:esp32c6-20220919
+Build:Sep 19 2022
+rst:0xc (SW_CPU),boot:0xc (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4001975a
+--- 0x4001975a: software_reset_cpu in ROM
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875720,len:0x1804
+load:0x4086c110,len:0xe2c
+load:0x4086e610,len:0x2e5c
+entry 0x4086c11a
+[0;32mI (22) boot: ESP-IDF v5.3.1 2nd stage bootloader[0m
+[0;32mI (22) boot: compile time Oct  6 2026 01:58:34[0m
+[0;32mI (24) boot: chip revision: v0.0[0m
+[0;32mI (25) boot.esp32c6: SPI Speed      : 80MHz[0m
+[0;32mI (29) boot.esp32c6: SPI Mode       : DIO[0m
+[0;32mI (34) boot.esp32c6: SPI Flash Size : 2MB[0m
+[0;32mI (39) boot: Enabling RNG early entropy source...[0m
+[0;32mI (44) boot: Partition Table:[0m
+[0;32mI (48) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (55) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (63) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (70) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (78) boot: End of partition table[0m
+[0;32mI (82) esp_image: segment 0: paddr=00010020 vaddr=42040020 size=8001ch (524316) map[0m
+[0;32mI (304) esp_image: segment 1: paddr=00090044 vaddr=40800000 size=07fd4h ( 32724) load[0m
+[0;32mI (321) esp_image: segment 2: paddr=00098020 vaddr=42000020 size=3a17ch (237948) map[0m
+[0;32mI (419) esp_image: segment 3: paddr=000d21a4 vaddr=40807fd4 size=041fch ( 16892) load[0m
+[0;32mI (434) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (435) boot: Disabling RNG early entropy source...[0m
+[0;32mI (448) cpu_start: Unicore app[0m
+[0;32mI (458) cpu_start: Pro cpu start user code[0m
+[0;32mI (458) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (458) app_init: Application information:[0m
+[0;32mI (461) app_init: Project name:     small_tcn_solar_esp32[0m
+[0;32mI (467) app_init: App version:      5fca45e-dirty[0m
+[0;32mI (472) app_init: Compile time:     Oct  6 2026 01:57:46[0m
+[0;32mI (478) app_init: ELF file SHA256:  590599909...[0m
+[0;32mI (483) app_init: ESP-IDF:          v5.3.1[0m
+[0;32mI (488) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (493) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (498) efuse_init: Chip rev:         v0.0[0m
+[0;32mI (503) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (510) heap_init: At 408495A0 len 00033070 (204 KiB): RAM[0m
+[0;32mI (516) heap_init: At 4087C610 len 00002F54 (11 KiB): RAM[0m
+[0;32mI (522) heap_init: At 50000000 len 00003FE8 (15 KiB): RTCRAM[0m
+[0;32mI (529) spi_flash: detected chip: generic[0m
+[0;32mI (533) spi_flash: flash io: dio[0m
+[0;33mW (537) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (550) sleep: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (557) sleep: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (564) coexist: coex firmware version: 4482466[0m
+[0;32mI (569) coexist: coexist rom version 5b8dcfa[0m
+[0;32mI (575) main_task: Started on CPU0[0m
+[0;32mI (575) main_task: Calling app_main()[0m
+
+=== TTM solar model on ESP32-C6 (TFLite Micro, float32) ===
+
+Model loaded OK (schema 3, 469696 bytes)
+Tensors allocated. Arena used: 160152 / 245760 bytes
+Input[0] past_values: type=1 dims=3 (1,1,52)
+Input[1] freq_token : type=4 dims=1 (1)
+Output  prediction : type=1 dims=3 (1,16,1)
+
+GatherEval: node=0x40839ecc input=0x408450b0 coords=0x40845194 output=0x408451a0
+GatherEval: node=0x4083a3ac input=0x40845368 coords=0x40844cfc output=0x40845374
+GatherEval: node=0x40839ecc input=0x408450b0 coords=0x40845194 output=0x408451a0
+
+abort() was called at PC 0x4201840f on core 0
+--- 0x4201840f: float* tflite::micro::GetTensorData<float>(TfLiteEvalTensor*) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/kernel_util.h:77(inlined by) Gather<float, long int> at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:37(inlined by) GatherEval at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:207
+--- Stack dump detected
+Core  0 register dump:
+MEPC    : 0x4080089e  RA      : 0x408050f2  SP      : 0x4084c390  GP      : 0x4080b1e4  
+--- 0x4080089e: panic_abort at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+--- 0x408050f2: __ubsan_include at /Users/shuvrosankar/esp/esp-idf/components/esp_system/ubsan.c:311
+TP      : 0x4084c780  T0      : 0x37363534  T1      : 0x7271706f  T2      : 0x33323130  
+S0/FP   : 0x00000004  S1      : 0x4084c3f4  A0      : 0x4084c3bc  A1      : 0x4084c3f2  
+A2      : 0x00000000  A3      : 0x4084c3e9  A4      : 0x00000001  A5      : 0x40849000  
+A6      : 0x00000000  A7      : 0x76757473  S2      : 0x0000000a  S3      : 0x00000004  
+S4      : 0x00000000  S5      : 0x4204f028  S6      : 0x00000000  S7      : 0x4080d070  
+S8      : 0x00000001  S9      : 0x00000000  S10     : 0x4080d080  S11     : 0x00000010  
+T3      : 0x6e6d6c6b  T4      : 0x6a696867  T5      : 0x66656463  T6      : 0x62613938  
+MSTATUS : 0x00001881  MTVEC   : 0x40800001  MCAUSE  : 0x00000007  MTVAL   : 0x00000000  
+--- 0x40800001: _vector_table at /Users/shuvrosankar/esp/esp-idf/components/riscv/vectors_intc.S:54
+MHARTID : 0x00000000  
+
+--- Backtrace:
+
+
+panic_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+463	    *((volatile int *) 0) = 0; // NOLINT(clang-analyzer-core.NullDereference) should be an invalid operation on targets
+#0  panic_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/panic.c:463
+#1  0x408050f2 in esp_system_abort (details=details@entry=0x4084c3bc "abort() was called at PC 0x4201840f on core 0") at /Users/shuvrosankar/esp/esp-idf/components/esp_system/port/esp_system_chip.c:92
+#2  0x40809866 in abort () at /Users/shuvrosankar/esp/esp-idf/components/newlib/abort.c:38
+#3  0x42018412 in tflite::micro::GetTensorData<float> (tensor=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/kernel_util.h:77
+#4  tflite::(anonymous namespace)::Gather<float, long> (output=<optimized out>, coords=<optimized out>, input=<optimized out>, params=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:37
+#5  tflite::(anonymous namespace)::GatherEval (context=<optimized out>, node=<optimized out>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/kernels/gather.cc:207
+#6  0x42029b70 in tflite::MicroInterpreterGraph::InvokeSubgraph (this=this@entry=0x4080cd2c <app_main::static_interpreter+112>, subgraph_idx=subgraph_idx@entry=0) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/micro_interpreter_graph.cc:277
+#7  0x4200d1ea in tflite::MicroInterpreter::Invoke (this=this@entry=0x4080ccbc <app_main::static_interpreter>) at /Users/shuvrosankar/thesis/esp32_project/components/espressif__esp-tflite-micro/tensorflow/lite/micro/micro_interpreter.cc:294
+#8  0x4200b598 in app_main () at /Users/shuvrosankar/thesis/esp32_project/main/main_ttm.cpp:121
+#9  0x42039d82 in main_task (args=<error reading variable: value has been optimized out>) at /Users/shuvrosankar/esp/esp-idf/components/freertos/app_startup.c:208
+#10 0x40805d4a in vPortTaskWrapper (pxCode=<optimized out>, pvParameters=<optimized out>) at /Users/shuvrosankar/esp/esp-idf/components/freertos/FreeRTOS-Kernel/portable/riscv/port.c:255
+
+
+
+ELF file SHA256: 590599909
+
+Rebooting...
+ESP-ROM:esp32c6-20220919
+Build:Sep 19 2022
+rst:0xc (SW_CPU),boot:0xc (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4001975a
+--- 0x4001975a: software_reset_cpu in ROM
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875720,len:0x1804
+load:0x4086c110,len:0xe2c
+load:0x4086e610,len:0x2e5c
+entry 0x4086c11a
+[0;32mI (22) boot: ESP-IDF v5.3.1 2nd stage bootloader[0m
+[0;32mI (22) boot: compile time Oct  6 2026 01:58:34[0m
+[0;32mI (24) boot: chip revision: v0.0[0m
+[0;32mI (25) boot.esp32c6: SPI Speed      : 80MHz[0m
+[0;32mI (29) boot.esp32c6: SPI Mode       : DIO[0m
+[0;32mI (34) boot.esp32c6: SPI Flash Size : 2MB[0m
+[0;32mI (39) boot: Enabling RNG early entropy source...[0m
+[0;32mI (44) boot: Partition Table:[0m
+[0;32mI (48) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (55) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (63) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (70) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (78) boot: End of partition table[0m
+[0;32mI (82) esp_image: segment 0: paddr=00010020 vaddr=42040020 size=8001ch (524316) map[0m
+
+Done

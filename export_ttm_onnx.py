@@ -93,7 +93,7 @@ def checkpoint_sanity_check(model):
     print("\n--- Checkpoint sanity check (eager PyTorch, no ONNX) ---")
     model.eval()
     past_values = torch.randn(1, CONTEXT_LENGTH, 1)
-    freq_token = torch.tensor([FREQ_TOKEN], dtype=torch.long)
+    freq_token = torch.tensor([FREQ_TOKEN], dtype=torch.int32)
     with torch.no_grad():
         out = model(past_values=past_values, freq_token=freq_token)
     pred = out.prediction_outputs
@@ -163,7 +163,7 @@ def parity_check(model, onnx_path, n_samples=16, atol=1e-3, rtol=1e-2):
     scale = 0.0
     for _ in range(n_samples):
         past_values = rng.standard_normal((1, CONTEXT_LENGTH, 1)).astype(np.float32)
-        freq_token = np.full((1,), FREQ_TOKEN, dtype=np.int64)
+        freq_token = np.full((1,), FREQ_TOKEN, dtype=np.int32)
 
         with torch.no_grad():
             torch_pred = model(
@@ -203,7 +203,7 @@ def main(checkpoint_path, out_path):
     checkpoint_sanity_check(model)
 
     dummy_past_values = torch.randn(1, CONTEXT_LENGTH, 1)
-    dummy_freq_token = torch.tensor([FREQ_TOKEN], dtype=torch.long)
+    dummy_freq_token = torch.tensor([FREQ_TOKEN], dtype=torch.int32)
 
     # Wrap so only prediction_outputs is traced into the ONNX graph.
     export_model = TTMExportWrapper(model)

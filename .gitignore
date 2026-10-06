@@ -1,72 +1,25 @@
+# macOS
+.DS_Store
+
+# ESP-IDF build artifacts and downloaded components
+esp32_project/build/
+esp32_project/managed_components/
+esp32_project/components/
+esp32_project/sdkconfig
+esp32_project/sdkconfig.old
+esp32_project/main/*.bak
+
 # Python
+venv/
 __pycache__/
 *.pyc
-*.pyo
-.Python
 
-# Virtual environment
-venv/
-env/
-.venv/
-
-# Dataset (public, regenerable via preprocess_ukpv.py -- don't bloat the repo)
+# Large datasets and derived data (regenerable from raw)
 dataset/
 processed/
 
-# Checkpoints -- .pt files can get large; small ones (SmallTCN, tens of KB)
-# are fine to track explicitly, but don't blanket-commit a checkpoints/
-# folder that might later hold bigger files (e.g. TTM checkpoints, which
-# will NOT be small).
-checkpoints/*.pt
-!checkpoints/small_tcn_*.pt
-
-# Exported/quantized model experiments -- regenerable via the export
-# scripts; many are intermediate debugging artifacts from the STM32
-# quantization investigation, not final deliverables. The FINAL verified
-# model lives in models/ (not ignored) -- copy it there before committing.
+# Model export binaries (large; regenerable from checkpoints)
 exports/
-esp32_deploy_files/
-test_out/
-st_ai_output/
-st_ai_ws/
 
-
-# ESP-IDF / embedded build artifacts
-build/
-sdkconfig
-sdkconfig.old
-managed_components/
-
-# STM32CubeIDE build artifacts
-Debug/
-Release/
-*.launch
-
-# OS junk
-*.broken
-.DS_Store
-Thumbs.db
-
-# Editor
-*.swp
-*.swo
-
-# Jupyter (if you end up using any notebooks for exploration)
-.ipynb_checkpoints/
-
-# Secrets -- just in case
-.env
-*.token
-
-# --- added: large or regenerable artifacts ---
-venv/
-__pycache__/
-*.pyc
-
-exports/
-*.onnx
-*.tflite
-checkpoints/*.ckpt
-
-data/
-*.parquet
+# Obsolete
+preprocess_ukpv.py.broken

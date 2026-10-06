@@ -1,0 +1,166 @@
+Executing action: all (aliases: build)
+Running ninja in directory /Users/shuvrosankar/thesis/esp32_project/build
+Executing "ninja all"...
+[1/9] Performing build step for 'bootloader'
+[1/1] cd /Users/shuvrosankar/thesis/esp32_project/build/bootloader/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /Users/shuvrosankar/thesis/esp32_project/build/bootloader/bootloader.bin
+Bootloader binary size 0x54e0 bytes. 0x2b20 bytes (34%) free.
+[2/9] No install step for 'bootloader'
+[3/9] Completed 'bootloader'
+[4/9] Building CXX object esp-idf/espressif__esp-tflite-micro/CMakeFiles/__idf_espressif__esp-tflite-micro.dir/tensorflow/lite/micro/kernels/gather.cc.obj
+[5/9] Linking C static library esp-idf/espressif__esp-tflite-micro/libespressif__esp-tflite-micro.a
+[6/9] Generating ld/sections.ld
+[7/9] Linking CXX executable small_tcn_solar_esp32.elf
+[8/9] Generating binary image from built executable
+esptool.py v4.12.0
+Creating esp32c6 image...
+Merged 2 ELF sections
+Successfully created esp32c6 image.
+Generated /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+[9/9] cd /Users/shuvrosankar/thesis/esp32_project/build/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/shuvrosankar/thesis/esp32_project/build/partition_table/partition-table.bin /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+small_tcn_solar_esp32.bin binary size 0xc6370 bytes. Smallest app partition is 0x100000 bytes. 0x39c90 bytes (23%) free.
+Executing action: flash
+Running ninja in directory /Users/shuvrosankar/thesis/esp32_project/build
+Executing "ninja flash"...
+[1/5] cd /Users/shuvrosankar/thesis/esp32_project/build/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /Users/shuvrosankar/thesis/esp32_project/build/partition_table/partition-table.bin /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.bin
+small_tcn_solar_esp32.bin binary size 0xc6370 bytes. Smallest app partition is 0x100000 bytes. 0x39c90 bytes (23%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /Users/shuvrosankar/thesis/esp32_project/build/bootloader/esp-idf/esptool_py && /Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /Users/shuvrosankar/thesis/esp32_project/build/bootloader/bootloader.bin
+Bootloader binary size 0x54e0 bytes. 0x2b20 bytes (34%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] cd /Users/shuvrosankar/esp/esp-idf/components/esptool_py && /opt/homebrew/bin/cmake -D IDF_PATH=/Users/shuvrosankar/esp/esp-idf -D "SERIAL_TOOL=/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python;;/Users/shuvrosankar/esp/esp-idf/components/esptool_py/esptool/esptool.py;--chip;esp32c6" -D "SERIAL_TOOL_ARGS=--before=default_reset;--after=hard_reset;write_flash;@flash_args" -D WORKING_DIRECTORY=/Users/shuvrosankar/thesis/esp32_project/build -P /Users/shuvrosankar/esp/esp-idf/components/esptool_py/run_serial_tool.cmake
+esptool.py --chip esp32c6 -p /dev/cu.usbmodem21101 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 2MB 0x0 bootloader/bootloader.bin 0x10000 small_tcn_solar_esp32.bin 0x8000 partition_table/partition-table.bin
+esptool.py v4.12.0
+Serial port /dev/cu.usbmodem21101
+Connecting...
+Chip is ESP32-C6 (QFN40) (revision v0.0)
+Features: Wi-Fi 6, BT 5 (LE), IEEE802.15.4, Single Core + LP Core, 160MHz, Unknown Embedded Flash
+Crystal is 40MHz
+USB mode: USB-Serial/JTAG
+MAC: 40:4c:ca:ff:fe:4c:6e:60
+BASE MAC: 40:4c:ca:4c:6e:60
+MAC_EXT: ff:fe
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Flash will be erased from 0x00000000 to 0x00005fff...
+Flash will be erased from 0x00010000 to 0x000d6fff...
+Flash will be erased from 0x00008000 to 0x00008fff...
+SHA digest in image updated
+Compressed 21728 bytes to 13113...
+Writing at 0x00000000... (100 %)
+Wrote 21728 bytes (13113 compressed) at 0x00000000 in 0.3 seconds (effective 524.0 kbit/s)...
+Hash of data verified.
+Compressed 811888 bytes to 506795...
+Writing at 0x00010000... (3 %)
+Writing at 0x0001be53... (6 %)
+Writing at 0x00021f39... (9 %)
+Writing at 0x00026395... (12 %)
+Writing at 0x0002a832... (16 %)
+Writing at 0x0002ecf0... (19 %)
+Writing at 0x0003318f... (22 %)
+Writing at 0x00037623... (25 %)
+Writing at 0x0003bae2... (29 %)
+Writing at 0x0003ff9d... (32 %)
+Writing at 0x0004442c... (35 %)
+Writing at 0x000488ec... (38 %)
+Writing at 0x0004cd7d... (41 %)
+Writing at 0x000512ca... (45 %)
+Writing at 0x00055658... (48 %)
+Writing at 0x00059b4e... (51 %)
+Writing at 0x0005e05a... (54 %)
+Writing at 0x0006254b... (58 %)
+Writing at 0x0006a6a0... (61 %)
+Writing at 0x000779c6... (64 %)
+Writing at 0x0008ac84... (67 %)
+Writing at 0x00093a85... (70 %)
+Writing at 0x0009a9ed... (74 %)
+Writing at 0x000a238e... (77 %)
+Writing at 0x000a8538... (80 %)
+Writing at 0x000af8b2... (83 %)
+Writing at 0x000b5a78... (87 %)
+Writing at 0x000bbc97... (90 %)
+Writing at 0x000c196e... (93 %)
+Writing at 0x000c80aa... (96 %)
+Writing at 0x000cf8fa... (100 %)
+Wrote 811888 bytes (506795 compressed) at 0x00010000 in 4.1 seconds (effective 1588.8 kbit/s)...
+Hash of data verified.
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.1 seconds (effective 463.4 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...
+--- esp-idf-monitor 1.10.0 on /dev/cu.usbmodem21101 115200
+--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H
+Executing action: monitor
+Running idf_monitor in directory /Users/shuvrosankar/thesis/esp32_project
+Executing "/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python /Users/shuvrosankar/esp/esp-idf/tools/idf_monitor.py -p /dev/cu.usbmodem21101 -b 115200 --toolchain-prefix riscv32-esp-elf- --target esp32c6 --revision 0 --decode-panic backtrace /Users/shuvrosankar/thesis/esp32_project/build/small_tcn_solar_esp32.elf -m '/Users/shuvrosankar/.espressif/python_env/idf5.3_py3.13_env/bin/python' '/Users/shuvrosankar/esp/esp-idf/tools/idf.py' '-p' '/dev/cu.usbmodem21101'"...
+ESP-ROM:esp32c6-20220919
+Build:Sep 19 2022
+rst:0x15 (USB_UART_HPSYS),boot:0xc (SPI_FAST_FLASH_BOOT)
+Saved PC:0x4001a378
+--- 0x4001a378: ets_sha_process in ROM
+SPIWP:0xee
+mode:DIO, clock div:2
+load:0x40875720,len:0x1804
+load:0x4086c110,len:0xe2c
+load:0x4086e610,len:0x2e5c
+entry 0x4086c11a
+[0;32mI (23) boot: ESP-IDF v5.3.1 2nd stage bootloader[0m
+[0;32mI (23) boot: compile time Oct  6 2026 01:58:34[0m
+[0;32mI (24) boot: chip revision: v0.0[0m
+[0;32mI (26) boot.esp32c6: SPI Speed      : 80MHz[0m
+[0;32mI (31) boot.esp32c6: SPI Mode       : DIO[0m
+[0;32mI (35) boot.esp32c6: SPI Flash Size : 2MB[0m
+[0;32mI (40) boot: Enabling RNG early entropy source...[0m
+[0;32mI (45) boot: Partition Table:[0m
+[0;32mI (49) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (56) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (64) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (71) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (79) boot: End of partition table[0m
+[0;32mI (83) esp_image: segment 0: paddr=00010020 vaddr=42040020 size=7ffech (524268) map[0m
+[0;32mI (199) esp_image: segment 1: paddr=00090014 vaddr=40800000 size=08004h ( 32772) load[0m
+[0;32mI (208) esp_image: segment 2: paddr=00098020 vaddr=42000020 size=3a154h (237908) map[0m
+[0;32mI (258) esp_image: segment 3: paddr=000d217c vaddr=40808004 size=041cch ( 16844) load[0m
+[0;32mI (265) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (266) boot: Disabling RNG early entropy source...[0m
+[0;32mI (280) cpu_start: Unicore app[0m
+[0;32mI (289) cpu_start: Pro cpu start user code[0m
+[0;32mI (289) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (289) app_init: Application information:[0m
+[0;32mI (292) app_init: Project name:     small_tcn_solar_esp32[0m
+[0;32mI (298) app_init: App version:      5fca45e-dirty[0m
+[0;32mI (303) app_init: Compile time:     Oct  6 2026 01:57:46[0m
+[0;32mI (309) app_init: ELF file SHA256:  c7733b17a...[0m
+[0;32mI (315) app_init: ESP-IDF:          v5.3.1[0m
+[0;32mI (319) efuse_init: Min chip rev:     v0.0[0m
+[0;32mI (324) efuse_init: Max chip rev:     v0.99 [0m
+[0;32mI (329) efuse_init: Chip rev:         v0.0[0m
+[0;32mI (334) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (341) heap_init: At 408535A0 len 00029070 (164 KiB): RAM[0m
+[0;32mI (347) heap_init: At 4087C610 len 00002F54 (11 KiB): RAM[0m
+[0;32mI (353) heap_init: At 50000000 len 00003FE8 (15 KiB): RTCRAM[0m
+[0;32mI (360) spi_flash: detected chip: generic[0m
+[0;32mI (364) spi_flash: flash io: dio[0m
+[0;33mW (368) spi_flash: Detected size(4096k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (382) sleep: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (388) sleep: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (395) coexist: coex firmware version: 4482466[0m
+[0;32mI (401) coexist: coexist rom version 5b8dcfa[0m
+[0;32mI (406) main_task: Started on CPU0[0m
+[0;32mI (406) main_task: Calling app_main()[0m
+
+=== TTM solar model on ESP32-C6 (TFLite Micro, float32) ===
+
+Model loaded OK (schema 3, 469696 bytes)
+Failed to resize buffer. Requested: 2945744, available 136160, missing: 2809584
+ERROR: AllocateTensors() failed. Bump kTensorArenaSize (currently 286720 bytes).
+[0;32mI (516) main_task: Returned from app_main()[0m
+
+Done
