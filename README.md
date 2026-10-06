@@ -4,8 +4,8 @@ MSCS thesis project, AIUB. Shuvro Sankar Sen (ID 25-93776-2). Supervisor: Dr. Ra
 
 A small dilated-causal-CNN forecaster (**SmallTCN**, 38K parameters) is trained on the public UK PV dataset
 and deployed in int8 on two microcontrollers, **STM32F446RE** and **ESP32-C6**. In parallel, IBM's
-**Tiny Time Mixer (TTM)**, a pretrained time-series foundation model, is being fine-tuned and compressed
-for the same hardware, to compare a purpose-built small model against a pretrained one. The goal is
+**Tiny Time Mixer (TTM)**, a pretrained time-series foundation model, is fine-tuned and studied for
+the same hardware, to compare a purpose-built small model against a pretrained one. The goal is
 short-term (15 to 90 min) solar output forecasting on genuinely constrained hardware.
 
 Full progress write-up: [`PROGRESS_REPORT.md`](PROGRESS_REPORT.md)
@@ -36,14 +36,72 @@ caveats and open items.
 
 A fine-tuned TTM-R2 checkpoint (70,972 parameters, context=52, forecast=16) exports cleanly to ONNX
 with a verified parity check (max abs diff 0.000001 vs. PyTorch, 16 random samples), and converts to
-a float32 TFLite model via `onnx2tf` (parity vs. ONNX: max abs diff 0.000002). **Deployment format
-decided: float32.** Three quantization approaches were tried -- full int8, int16x8, and dynamic-range
--- and all three are ruled out, each for a distinct, confirmed reason (see Key findings below). This
-is not a workaround: `esp-tflite-micro`'s own maintainers recommend float32 as the correct alternative
-to full-integer quantization on hardware with FPU support (which the ESP32-C6 has), for exactly this
-situation. Deploying as float32 costs flash (458.7 KiB vs. SmallTCN's 40.7 KiB int8) but keeps full
-numerical fidelity (parity vs. ONNX: max abs diff 0.000002). Still open: the model's real flash/RAM
-footprint once embedded in the ESP-IDF build, and the resulting inference latency on-device.
+a float32 TFLite model via `onnx2tf` (parity vs. ONNX: max abs diff 0.000002, Pearson 1.000000 on
+200 real test windows). **Deployment to ESP32-C6 was attempted and is blocked -- TTM does not fit on
+the target in its current form.** The investigation reached a well-isolated, evidence-backed
+negative result. Full report: [`thesis_artifacts/ttm_esp32/REPORT.md`](thesis_artifacts/ttm_esp32/REPORT.md).
+
+### What worked
+
+The conversion chain is verified end-to-end:
+- PyTorch → ONNX, parity max abs diff **1e-6**
+- ONNX → TFLite float32 via `onnx2tf`, parity max abs diff **2e-6**
+- TFLite loads on the ESP32-C6, allocates a **160,152 / 245,760 byte** tensor arena, correctly
+  wires the two inputs (`past_values` float32 (1,1,52), `freq_token` int64 (1,)) and one output
+  (float32 (1,16,1)), and executes the first ~8 operations of the graph cleanly
+
+### What failed on-device
+
+**The model aborts inside `tflite-micro`'s greedy memory planner** at the 3rd `GATHER` node, with
+a reproducible RISC-V store/AMO access fault (`MCAUSE=0x7`). Debug instrumentation confirmed that
+the same node with the same tensor pointers succeeds on the 1st invocation and fails on the 3rd
+within a single `Invoke()` -- a lifetime-tracking bug triggered by TTM's 1600-tensor graph.
+
+**The linear planner** (which avoids the greedy planner's buffer-reuse logic entirely) requires
+**2.9 MB of activation memory** for the same graph -- **~5.7x the ESP32-C6's total 512 KB SRAM**.
+TTM fits only because the greedy planner's lifetime-based buffer reuse compresses the 2.9 MB
+worst-case footprint down to 160 KB.
+
+**Three quantization approaches were tried, all three ruled out:**
+
+- *Full int8* (`TFLITE_BUILTINS_INT8`) converts but crashes on 100% of 200 real test-split windows
+  with `tflite/kernels/div.cc:242 data[i] != 0` at the same five DIV nodes, regardless of input
+  variance. Root cause: TTM's Erf/GELU activation decomposes into a rational approximation
+  (`abs`/`sign`/`exp`/`div`/`rsqrt`), and the divisor tensor's dynamic range (~0 to 7.4) is too
+  wide for int8's 256 levels -- ~77% of its activations quantize to the exact zero-point.
+  Confirmed pervasive (TF's own `QuantizationDebugger` crashes at a *different* DIV node on its
+  own traversal, plus `NaN`/`Inf` statistics at multiple layers).
+- *int16x8* (`ACTIVATIONS_INT16_WEIGHTS_INT8`, meant to fix the above) fails at conversion --
+  `freq_token`'s int64 path forces a `Cast`, and the int16 calibrator cannot record min/max for
+  integer-valued Cast outputs.
+- *Dynamic-range* (int8 weights, float32 activations) converts cleanly and passes parity
+  (375.8 KiB, 18% smaller than float32; relative max error 0.49%) but **TFLite Micro does not
+  support dynamic-range quantization at all** -- it only ships kernels for pure float32 or
+  full-integer inference.
+
+**Conclusion:** TTM resists int8 quantization structurally (Erf/GELU dynamic range), is blocked by
+a TFLite converter limitation at int16x8 (Cast calibration), and -- even in float32 -- does not fit
+on the ESP32-C6 in its current form because the model requires the greedy memory planner (2.9 MB
+linear footprint vs. 512 KB SRAM) and that planner has a reproducible lifetime-tracking bug on TTM's
+1600-tensor graph. The finding is documented in `thesis_artifacts/ttm_esp32/` with the exact tensor
+pointers, arena size, register dump, and every kernel modification made during investigation.
+
+### Kernel patches required (for the record)
+
+TTM's TFLite graph uses ops that `esp-tflite-micro` 1.4.1 either does not ship or does not
+dispatch on int64. Seven kernel modifications were made to get the model loading and executing:
+
+| File | Change |
+|---|---|
+| `sign.cc` | New SIGN kernel + `ParseSign` no-op parser (was missing upstream) |
+| `select_extra.cc` | New `Register_SELECT` wrapper around `Register_SELECT_V2` |
+| `cast.cc` | int64 input and output branches |
+| `select.cc` | int64 coords dispatch |
+| `add.cc` / `esp_nn/add.cc` | int64 branch (esp-nn variant is the one actually linked) |
+| `gather.cc` | int64 coords dispatch |
+| `micro_mutable_op_resolver.h` | `AddSign`, `AddSelect`, `ParseSign` forward declarations |
+
+Full patched sources in `thesis_artifacts/ttm_esp32/patched_kernels/`.
 
 ### TTM checkpoints
 
@@ -53,7 +111,7 @@ Three fine-tuning runs are tracked, from separate invocations of `finetune_ttm.p
 |---|---|---|
 | `ttm_finetuned_models/` | default settings | loads correctly, not yet used downstream |
 | `ttm_full_finetuned_models/` | full fine-tune, default LR | loads correctly, not yet used downstream |
-| `ttm_full_finetuned_lr1e-4/` | full fine-tune, lr=1e-4 | **used by `export_ttm_onnx.py`; verified end-to-end (ONNX parity check passed)** |
+| `ttm_full_finetuned_lr1e-4/` | full fine-tune, lr=1e-4 | **used by `export_ttm_onnx.py`; verified end-to-end** |
 
 If you're picking up this repo later: use `ttm_full_finetuned_lr1e-4/` unless you have a specific
 reason to compare against the other two.
@@ -89,17 +147,31 @@ build_ttm_calibration_data.py            real-data calibration windows (not synt
                                           reproduces the exact train-fit Normalizer
 memory_safe_windows.py                   two-pass window counting/sampling (avoids OOM on
                                           the full 6.7M-window train split)
+
+# TTM quantization investigation (see Key findings; all preserved for the record)
 convert_int8_manual.py                   full int8 TFLite conversion attempt -- fails, see below
 inspect_int8_flatbuffer.py               raw flatbuffer weight-byte-by-dtype inspection
 inspect_node70.py                        diagnostic: isolates the failing int8 DIV node
 int8_parity_check.py / isolate_div_crash.py   confirm the int8 failure is structural, not data-dependent
 convert_int16x8_or_fallback.py           int16x8 quantization attempt -- also fails, see below
-convert_dynamic_range.py                 dynamic-range quantization -- works (deployment candidate)
+convert_dynamic_range.py                 dynamic-range quantization -- works numerically, unsupported by TFLM
 test_quantized_model.py / verify_float32_runs.py   parity checks used across all TFLite variants
 make_cind_calibration.py, make_freq_token_calibration.py   abandoned onnx2tf -oiqt/-cind
-                                          approach, kept as a documented dead end (see below)
+                                          approach, kept as a documented dead end
 quant_debug_erf.py                       TF QuantizationDebugger run -- confirms the int8 DIV
                                           failure is pervasive, not a single fixable node
+
+# TTM ESP32-C6 deployment investigation (see thesis_artifacts/ttm_esp32/)
+main_ttm.cpp                             TTM firmware: two-input handling, de-norm, timing loop
+list_ttm_ops.py                          op-set audit for the TFLite graph
+prepare_esp32_deployment_ttm.py          model + test vector as C arrays for TTM firmware
+
+thesis_artifacts/ttm_esp32/              Full TTM-on-ESP32 investigation archive
+  REPORT.md                                detailed technical write-up
+  main_ttm.cpp                             TTM firmware source
+  model_data.cc.snapshot                   TTM model as embedded C array (469,696 bytes)
+  patched_kernels/                         all kernel modifications (7 files + resolver header)
+  ttm_ge.log, ttm_steps.log, ttm_data.log  on-device boot traces with debug instrumentation
 ```
 
 ## Reproduce
@@ -128,10 +200,16 @@ idf.py set-target esp32c6 && idf.py build && idf.py -p <PORT> flash monitor
 python3 export_ttm_onnx.py \
     --checkpoint ttm_full_finetuned_lr1e-4/ttm_finetuned \
     --out_path exports/ttm_solar.onnx
+
+# 6. TTM ONNX -> TFLite float32 (parity-checked)
+python3 onnx_to_tf_ttm.py --onnx_path exports/ttm_solar.onnx --out_dir exports/ttm_solar_tf
 ```
 
-STM32: import `models/small_tcn_solar_manual_int8.tflite` into STM32Cube AI Studio (type: TFLite,
-target stm32f4), then Analyze / Generate / Validate on target.
+To reproduce the TTM-on-ESP32 deployment attempt (blocks at the greedy memory planner):
+
+```bash
+# See thesis_artifacts/ttm_esp32/REPORT.md, section 6 "Reproducibility"
+```
 
 ## Key findings
 
@@ -143,53 +221,50 @@ k shifted pointwise convs (identical math) fixes it. Details and the minimal rep
 traces TTM's adaptive-patching reshape (`hidden.shape[2] * adaptive_patch_factor`), producing a graph
 where the patch-mixer's traced activation shape disagrees with its own weight shape (exported output
 declared `[1, 16, 13]` instead of the correct `[1, 16, 1]`; fails at ONNX Runtime session creation,
-not at inference). Confirmed via `debug/check_patch_mixer_shapes.py`: the checkpoint and eager PyTorch
-forward pass are correct (weight `in_features` matches the real runtime shape); the bug is isolated to
-the tracer. Fix: `dynamo=True` (the `torch.export`-based exporter), which traces the reshape
-symbolically. **Always export TTM with `dynamo=True`** -- the legacy tracer silently produces an
-unusable graph for this architecture.
+not at inference). Confirmed via `debug/check_patch_mixer_shapes.py`. Fix: `dynamo=True` (the
+`torch.export`-based exporter), which traces the reshape symbolically. **Always export TTM with
+`dynamo=True`** -- the legacy tracer silently produces an unusable graph for this architecture.
 
-**TTM quantization: three approaches tried, all three ruled out -- float32 is the correct deployment
-format, not a fallback.**
+**TTM quantization: three approaches tried, all three ruled out.**
 
-- *Full int8* (`TFLITE_BUILTINS_INT8`) converts and loads without error, but crashes on 100% of 200
-  real test-split windows with `tflite/kernels/div.cc:242 data[i] != 0` at the same graph node,
-  regardless of input variance (ruling out a data-dependent cause -- see `isolate_div_crash.py`).
-  Root cause, confirmed via direct node/tensor inspection (`inspect_node70.py`,
-  `inspect_int8_flatbuffer.py`): TTM's Erf/GELU activation decomposes into a rational approximation
-  (`abs`/`sign`/`exp`/`div`/`rsqrt`), and the divisor tensor's real dynamic range (~0 to 7.4) is too
-  wide for int8's 256 levels -- about 77% of its real values quantize down to the exact zero-point,
-  which dequantizes to literal `0.0`. TFLite's int8 `DIV` kernel correctly refuses to divide by a
-  zero-point code. Confirmed pervasive, not a single fixable node: TF's own `QuantizationDebugger`
-  (`quant_debug_erf.py`) independently crashes on the same error at a *different* DIV node (241,
-  not 70) while walking the graph in its own layer order, and separately flags at least one layer
-  with `NaN`/`Inf` quantization statistics -- evidence of numerical fragility at multiple points in
-  the Erf/LayerNorm-heavy mixer stack, not one isolated bad node. Not fixable by denylisting a single
-  op, and not attempted as a from-scratch activation-rewrite (unlike the STM32 dilation fix, there is
-  no known equivalent rewrite of Erf's rational approximation guaranteed to avoid the same dynamic-
-  range problem; redesigning it would be activation-function research, out of scope here).
-- *int16x8* (`ACTIVATIONS_INT16_WEIGHTS_INT8`, meant to fix the above by giving activations 65,536
-  levels instead of 256) fails for a different reason: the TFLite converter cannot calibrate a
-  `Cast` op's min/max range (`Empty min/max for tensor Cast`), caused by `freq_token`'s int64 path.
-  This is a known TFLite converter limitation, not something a better representative dataset fixes.
-- *Dynamic-range quantization* (int8 weights, float32 activations) converts cleanly and passes
-  parity (375.8 KiB, 18% smaller than float32; max abs diff 0.024185, relative max error 0.49%,
-  Pearson 0.999996 vs. ONNX on 200 real windows) -- but **TFLite Micro does not support dynamic-range
-  quantization at all**, by explicit design (confirmed via TensorFlow's own forum and a tflite-micro
-  GitHub issue closed as "not planned"): embedded targets rarely have hardware float support, so
-  TFLM only ships kernels for pure float32 or full-integer inference, never runtime int8-weight
-  dequantization. This model is numerically valid but cannot run on `esp-tflite-micro`.
-- *Abandoned path, kept for the record:* `onnx2tf`'s own `-oiqt`/`-cind` quantization flags were
-  tried first and abandoned -- `-cind` requires float32 calibration data for every graph input, with
-  no documented way to supply a non-quantized integer input like `freq_token`. Switched to a manual
-  `tf.lite.TFLiteConverter` script instead, which handles mixed input dtypes correctly.
-- *Conclusion:* TFLite Micro's own documented options for this situation are "full integer
-  quantization" (ruled out above) or "optimized float32 inference on FPU-equipped hardware" -- the
-  ESP32-C6 has FPU support, so **float32 is the correct, maintainer-recommended deployment format**
-  for TTM, not a fallback. This is a genuine architectural contrast worth stating plainly: SmallTCN
-  (purpose-built, no GELU-family activations) quantizes to int8 cleanly after one targeted toolchain
-  fix; TTM (a pretrained foundation model with Erf/GELU throughout) resists int8 structurally, across
-  three independent approaches, and deploys as float32 instead.
+- *Full int8* converts and loads but crashes on 100% of test windows with `data[i] != 0` at five
+  fixed DIV nodes. Root cause: TTM's Erf/GELU activation decomposes into a rational approximation
+  whose divisor tensor (~0-7.4 dynamic range) loses ~77% of its values to the int8 zero-point. The
+  int8 `DIV` kernel correctly refuses to divide by a zero-point code. Not data-dependent, not
+  single-node-fixable -- confirmed independently by TF's `QuantizationDebugger` crashing at a
+  *different* DIV node during its own traversal, and flagging `NaN`/`Inf` at multiple layers.
+  Rewriting the activation (like the STM32 dilation fix) is out of scope -- no known equivalent
+  rewrite of Erf's rational approximation avoids the same dynamic-range problem.
+- *int16x8* fails at conversion -- `freq_token`'s int64 path forces a `Cast`, and the int16
+  calibrator can't record min/max for integer-valued Cast outputs. TFLite converter limitation.
+- *Dynamic-range* (int8 weights, float32 activations) is numerically clean and passes parity
+  (relative max error 0.49%, Pearson 0.999996) but **TFLite Micro does not support dynamic-range
+  quantization by design** -- it only ships kernels for pure float32 or full-integer inference.
+- *The `-oiqt`/`-cind` onnx2tf path was tried first and abandoned*: `-cind` requires float32
+  calibration for every graph input, with no documented way to supply a non-quantized integer
+  input like `freq_token`. A manual `tf.lite.TFLiteConverter` script handles mixed dtypes correctly.
+
+**TTM does not fit on the ESP32-C6 in float32 either, once actually deployed.**
+
+- TTM loads, allocates 160 KB / 245 KB arena, and executes the first ~8 ops cleanly.
+- The model then aborts inside `tflite-micro`'s greedy memory planner at the 3rd Gather node --
+  same tensor pointers on the 1st and 3rd invocations, but a RISC-V store/AMO access fault on the
+  3rd. Reproducible lifetime-tracking bug triggered by TTM's 1600-tensor graph.
+- The linear planner (avoids the bug) needs **2.9 MB** of activation memory -- **5.7x** the
+  ESP32-C6's 512 KB SRAM. TTM fits at all only because the greedy planner's lifetime-based
+  buffer reuse compresses the 2.9 MB worst-case footprint down to 160 KB.
+- TTM's TFLite graph uses several ops that `esp-tflite-micro` 1.4.1 does not ship or does not
+  dispatch on int64. Seven kernel patches were required just to reach the point of running.
+- **Conclusion: TTM would need model compression (reduced context length, reduced d_model, or
+  pruning) to fit on the ESP32-C6.** The specific failure modes are documented in
+  `thesis_artifacts/ttm_esp32/REPORT.md` and are architecturally distinct from the int8 issue --
+  even a perfectly quantizable TTM would still not fit in float32 on this chip.
+
+**Architectural contrast worth stating plainly:** SmallTCN (purpose-built, no GELU-family
+activations) quantizes to int8 cleanly after one targeted toolchain fix and runs at 97.7 ms on the
+ESP32-C6. TTM (a pretrained foundation model with Erf/GELU throughout) resists int8 structurally
+across three independent approaches, and -- even in float32 -- does not fit on the same hardware
+without model compression. That is the thesis result.
 
 ## Status
 
@@ -197,13 +272,15 @@ format, not a fallback.**
 - [x] SmallTCN trained on solar data
 - [x] int8 deployment on STM32F446RE and ESP32-C6
 - [x] TTM fine-tuned and exported to ONNX (parity-checked)
-- [x] TTM: ONNX -> TensorFlow -> TFLite; deployment format decided as float32 after full int8,
-      int16x8, and dynamic-range quantization were all tried and ruled out, each for a distinct,
-      confirmed reason (see Key findings) -- `esp-tflite-micro` itself does not support dynamic-range
-      quantization, and full int8 fails pervasively on TTM's Erf/GELU activations
+- [x] TTM: ONNX → TFLite float32 (parity-checked)
+- [x] TTM: full int8, int16x8, and dynamic-range quantization tried and ruled out, each for a
+      distinct confirmed reason (see Key findings)
+- [x] TTM: ESP32-C6 deployment attempted; model loads and executes but aborts in the greedy
+      memory planner; linear-planner footprint 2.9 MB (5.7x SRAM). **Does not fit as-is.**
+- [x] Full TTM-on-ESP32 investigation archived in `thesis_artifacts/ttm_esp32/`
 - [ ] int8 accuracy of SmallTCN on the full test set
-- [ ] Measure TTM float32 TFLite's real flash/RAM footprint and inference latency once embedded in
-      the ESP-IDF build; deploy on ESP32-C6
+- [ ] TTM model compression experiment (context=26 or reduced d_model) -- the obvious next step
+      toward making TTM fit
 - [ ] Hardware benchmark vs published works (TinyHAR-Net)
 - [ ] Accuracy comparison vs published cloud-side PV forecasting models
 - [ ] MQTT network cost and live dashboard (needs solar panel)
