@@ -12,13 +12,28 @@ Full progress write-up: [`PROGRESS_REPORT.md`](PROGRESS_REPORT.md)
 
 ## Results (SmallTCN)
 
-Forecasting accuracy (test set 2024, 703 sites; naive-persistence MAE is 12.31 Wh):
+Forecasting accuracy on the full test set (2024, 703 sites, 969,445 windows;
+naive-persistence MAE is 12.31 Wh). The fp32 column is the trained PyTorch model;
+the int8 column is the deployed TFLite model that actually runs on both MCUs.
 
-| Metric | SmallTCN |
-|---|---|
-| MASE | 0.808 |
-| MAE / RMSE | 9.95 Wh / 22.25 Wh |
-| sMAPE (daylight only) | 44.77% |
+| Metric | SmallTCN fp32 | SmallTCN int8 (deployed) |
+|---|---|---|
+| MASE | 0.808 | **0.846** |
+| MAE / RMSE | 9.95 Wh / 22.25 Wh | 10.42 Wh / 22.84 Wh |
+| sMAPE (daylight only) | 44.77% | 47.06% |
+
+**Quantization cost:** int8 deployment costs **+0.038 MASE** (+4.7% relative),
++0.47 Wh MAE, +2.29 percentage-points sMAPE (daylight). Daylight-only cosine
+similarity between int8 and fp32 predictions is **0.971** — computed on the
+538,069 test windows with actual generation > 1 Wh, since the all-windows
+cosine (0.745) is dominated by numerical noise on near-zero night-time
+vectors. An earlier 20-window host check reported cosine 0.998 / normalized
+MAE 0.025; that sample was too small to estimate the tail of the quantization
+error distribution and overstated fidelity — the full-test numbers above are
+the honest figures. The int8 cost is at the higher end of typical for a TCN,
+likely because the 38K-parameter model has less redundancy to absorb
+quantization noise and the manual dilation rewrite introduces more
+quantization breakpoints than a fused dilated op.
 
 Deployment (int8, measured on hardware):
 
@@ -28,9 +43,6 @@ Deployment (int8, measured on hardware):
 | Model weights (flash) | 40.7 KiB | 100 KiB model file embedded |
 | Working RAM | 16.4 KiB activations | 144 KiB arena (upper bound, see report) |
 | Output vs reference | exact | exact |
-
-Not yet measured: forecast accuracy of the int8 model on the full test set. See the report for
-caveats and open items.
 
 ## TTM: status
 
@@ -129,6 +141,7 @@ torch_to_tflite_tcn_manual_dilation.py   PyTorch -> Keras port, dilation rewritt
                                           1x1 convs, parity-checked -> int8 TFLite (final, SmallTCN)
 test_minimal_quant.py                    minimal repro of the STM32 dilation issue
 prepare_esp32_deployment.py              model + test vector as C arrays for the ESP32 firmware
+evaluate_int8_accuracy.py                full-test-set int8 vs fp32 accuracy comparison
 esp32_project/                           ESP-IDF app (TFLite Micro)
 models/                                  final int8 TFLite model (SmallTCN)
 checkpoints/                             trained SmallTCN checkpoint
@@ -136,7 +149,6 @@ checkpoints/                             trained SmallTCN checkpoint
 finetune_ttm.py                          fine-tune TTM-R2 on solar data
 zeroshot_ttm.py                          zero-shot TTM baseline
 export_ttm_onnx.py                       TTM -> ONNX, parity-checked (dynamo=True required -- see below)
-evaluate_int8_accuracy.py                int8 vs fp32 accuracy comparison
 ttm_full_finetuned_lr1e-4/               verified TTM checkpoint (see table above)
 debug/check_patch_mixer_shapes.py        diagnostic: confirms TTM's adaptive-patching
                                           layer shapes are correct in eager mode
@@ -192,16 +204,19 @@ python3 train_solar_tcn.py --stride 24
 python3 torch_to_tflite_tcn_manual_dilation.py \
     --checkpoint checkpoints/small_tcn_solar.pt --out_prefix small_tcn_solar_manual
 
-# 4. ESP32-C6 (separate terminal, ESP-IDF environment only, never pip install here)
+# 4. int8 accuracy on the full test set (969,445 windows)
+python3 evaluate_int8_accuracy.py
+
+# 5. ESP32-C6 (separate terminal, ESP-IDF environment only, never pip install here)
 cd esp32_project && . ~/esp/esp-idf/export.sh
 idf.py set-target esp32c6 && idf.py build && idf.py -p <PORT> flash monitor
 
-# 5. TTM -> ONNX (parity-checked)
+# 6. TTM -> ONNX (parity-checked)
 python3 export_ttm_onnx.py \
     --checkpoint ttm_full_finetuned_lr1e-4/ttm_finetuned \
     --out_path exports/ttm_solar.onnx
 
-# 6. TTM ONNX -> TFLite float32 (parity-checked)
+# 7. TTM ONNX -> TFLite float32 (parity-checked)
 python3 onnx_to_tf_ttm.py --onnx_path exports/ttm_solar.onnx --out_dir exports/ttm_solar_tf
 ```
 
@@ -216,6 +231,14 @@ To reproduce the TTM-on-ESP32 deployment attempt (blocks at the greedy memory pl
 **STM32 / SmallTCN:** ST Edge AI Core v4.0.1 (STM32F4 backend) runs dilated convolutions in float32
 even when the model file is int8, so weights stayed near float size. Rewriting each dilated conv as
 k shifted pointwise convs (identical math) fixes it. Details and the minimal repro are in the report.
+
+**SmallTCN int8 accuracy cost:** deployment in int8 costs +0.038 MASE (0.808 → 0.846, +4.7%
+relative), +0.47 Wh MAE (9.95 → 10.42 Wh), and +2.29 pp sMAPE (daylight, 44.77% → 47.06%), measured
+on the full 969,445-window test set. Daylight-only cosine similarity vs fp32 predictions is 0.971.
+This is at the higher end of typical for a TCN, likely due to the small parameter count (less
+redundancy to absorb quantization noise) and the manual dilation rewrite (more quantization
+breakpoints than a fused dilated op). The deployed int8 model is bit-exact to its own host
+reference; the accuracy cost is inherent to the quantization step, not to the deployment.
 
 **TTM ONNX export:** the legacy TorchScript tracer (`torch.onnx.export(..., dynamo=False)`) incorrectly
 traces TTM's adaptive-patching reshape (`hidden.shape[2] * adaptive_patch_factor`), producing a graph
@@ -262,15 +285,16 @@ not at inference). Confirmed via `debug/check_patch_mixer_shapes.py`. Fix: `dyna
 
 **Architectural contrast worth stating plainly:** SmallTCN (purpose-built, no GELU-family
 activations) quantizes to int8 cleanly after one targeted toolchain fix and runs at 97.7 ms on the
-ESP32-C6. TTM (a pretrained foundation model with Erf/GELU throughout) resists int8 structurally
-across three independent approaches, and -- even in float32 -- does not fit on the same hardware
-without model compression. That is the thesis result.
+ESP32-C6, at a measured accuracy cost of +4.7% MASE. TTM (a pretrained foundation model with
+Erf/GELU throughout) resists int8 structurally across three independent approaches, and -- even in
+float32 -- does not fit on the same hardware without model compression. That is the thesis result.
 
 ## Status
 
 - [x] Dataset pipeline
 - [x] SmallTCN trained on solar data
 - [x] int8 deployment on STM32F446RE and ESP32-C6
+- [x] int8 accuracy of SmallTCN on the full test set (MASE 0.846 vs fp32 0.808)
 - [x] TTM fine-tuned and exported to ONNX (parity-checked)
 - [x] TTM: ONNX → TFLite float32 (parity-checked)
 - [x] TTM: full int8, int16x8, and dynamic-range quantization tried and ruled out, each for a
@@ -278,7 +302,6 @@ without model compression. That is the thesis result.
 - [x] TTM: ESP32-C6 deployment attempted; model loads and executes but aborts in the greedy
       memory planner; linear-planner footprint 2.9 MB (5.7x SRAM). **Does not fit as-is.**
 - [x] Full TTM-on-ESP32 investigation archived in `thesis_artifacts/ttm_esp32/`
-- [ ] int8 accuracy of SmallTCN on the full test set
 - [ ] TTM model compression experiment (context=26 or reduced d_model) -- the obvious next step
       toward making TTM fit
 - [ ] Hardware benchmark vs published works (TinyHAR-Net)
