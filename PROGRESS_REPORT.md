@@ -26,7 +26,7 @@
 | Retrain SmallTCN on solar data (Months 1–2) | ✅ Done (fp32 MASE 0.808) |
 | Quantize + deploy SmallTCN on both boards (Months 2–3) | ✅ Done (both boards, verified; int8 accuracy cost measured at +0.038 MASE) |
 | Quantize + deploy TTM (Months 2–3) | 🟡 Fine-tuned, exported, converted, and attempted on hardware. Does not fit on ESP32-C6 (§5.5–5.6) — documented negative result, not pending work |
-| Hardware benchmark vs TinyHAR-Net (Month 4) | 🟡 SmallTCN numbers ready; TinyHAR-Net figures extracted from the paper; TTM excluded since it does not run on-device — comparison table still being drafted |
+| Hardware benchmark vs TinyHAR-Net (Month 4) | ✅ SmallTCN vs TinyHAR-Net compared on the same STM32F446RE; see §7 and `thesis_artifacts/hardware_comparison_tinyhar.md`. TTM excluded (does not run on-device) |
 | Accuracy comparison vs published cloud models (Month 4) | 🟡 First paper extracted; needs per-horizon metrics computed on the SmallTCN test set |
 | MQTT network cost + live dashboard (Month 5) | ⬜ Waiting on solar panel |
 | Adaptive updating (TEDA-RLS) | ⬜ Not started |
@@ -205,7 +205,12 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
 - [x] **Evaluate the int8 model on the full test set (MASE/MAE)** and compare with fp32. Done: int8 MASE 0.846 vs fp32 0.808 (+0.038, +4.7%). Full-test-set daylight cosine vs fp32: 0.971. See §5.3.
 - [ ] ESP32 ablation (`preserve_all_tensors=false`) to confirm root cause and recover RAM.
 - [x] Fine-tune **TTM** on the solar data, compress it, and deploy it. Done: fine-tuned, exported, converted, and attempted on ESP32-C6 hardware. TTM does not fit — three quantization approaches ruled out, and the float32 model is blocked by the planner fault and the ≈2.9 MB linear footprint (§5.5–5.6). No further deployment work planned against TTM-on-ESP32-C6 unless scope changes.
-- [ ] Complete the hardware comparison table (including TinyHAR-Net's published figures) — SmallTCN only, since TTM does not run on-device. **In progress:** TinyHAR-Net figures extracted from the paper (STM32 Nucleo-F446RE, 43.78–51.30 KB flash, 41.31–51.57 ms latency, 30.12 KB RAM); verify against the source before citing. Draft table: `thesis_artifacts/hardware_comparison_tinyhar.md`. Note the tasks differ (human activity recognition vs. forecasting), so this is a like-for-like *platform* comparison only.
+- [x] Hardware comparison table vs TinyHAR-Net (both on STM32F446RE). Full comparison in
+      `thesis_artifacts/hardware_comparison_tinyhar.md`. SmallTCN: 40.7 KiB flash (int8),
+      18.2 ms, 16.4 KiB RAM. TinyHAR-Net: 43.78–51.30 KiB flash (float32), 41.31–51.57 ms,
+      30.12 KiB RAM. SmallTCN is 2.3–2.8× faster on the same MCU; the two models make
+      opposite choices on int8 quantization, each justified by starting footprint. TTM
+      excluded since it does not run on-device.
 - [ ] Accuracy comparison against the cited cloud-side PV forecasting results (needs care: different datasets, horizons and resolutions). **In progress:** first paper extracted (Zhou et al. 2019, ALSTM: single site, 7.5-min resolution, MAPE 24.65–37.82% across horizons). A direct comparison needs per-horizon MAPE computed on the SmallTCN test set.
 - [ ] *(Possible follow-up, not committed to timeline)* If TTM remains in scope: re-export with a shorter context length to shrink the ≈2.9 MB linear-planner requirement, or evaluate ESP32-S3 with PSRAM as a larger target. The S3 has an FPU per ESP-IDF's capability headers, which would also address the compute concern from §5.5. Neither attempted yet.
 - [ ] When the solar panel is available: sensor → MCU → MQTT → dashboard, plus network cost measurements.
