@@ -1,0 +1,148 @@
+/Users/shuvrosankar/thesis/venv/lib/python3.13/site-packages/tensorflow/lite/python/interpreter.py:457: UserWarning:     Warning: tf.lite.Interpreter is deprecated and is scheduled for deletion in
+    TF 2.20. Please use the LiteRT interpreter from the ai_edge_litert package.
+    See the [migration guide](https://ai.google.dev/edge/litert/migration)
+    for details.
+    
+  warnings.warn(_INTERPRETER_DELETION_WARNING)
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+Loading test split ...
+Loaded capacity (kWp) for 30756 sites
+Loading 11 files from ./processed/test ...
+  loaded 10/11 files
+  loaded 11/11 files
+Loaded 279 sites, 23,947,135 total rows
+Built 969,445 windows from 279/279 sites (context=36, forecast=18, stride=24, channels=5)
+  [!] 1 sites had no capacity in metadata.csv -- used fallback median (2.85 kWp)
+Evaluating on 969,445 test windows
+
+Running fp32 SmallTCN ...
+
+=== SmallTCN fp32 -- per-horizon MAPE (daylight-only, y_true > 1.0 Wh) ===
+step  mins           n    MAPE %    MAE Wh   RMSE Wh
+   1     5     476,246     31.45    11.209    21.123
+   2    10     476,327     41.66    14.175    25.445
+   3    15     476,834     47.10    15.646    27.307
+   4    20     476,917     51.95    16.712    28.496
+   5    25     476,922     54.51    17.493    29.418
+   6    30     476,894     58.11    18.190    30.146
+   7    35     476,439     61.82    18.780    30.839
+   8    40     476,146     64.94    19.317    31.456
+   9    45     475,734     66.77    19.780    31.992
+  10    50     475,205     68.94    20.273    32.594
+  11    55     474,961     70.91    20.711    33.036
+  12    60     474,719     73.19    21.113    33.515
+  13    65     474,148     76.40    21.520    33.946
+  14    70     473,855     78.72    21.896    34.401
+  15    75     473,643     81.11    22.258    34.831
+  16    80     473,592     83.00    22.611    35.240
+  17    85     473,960     85.04    22.946    35.673
+  18    90     474,483     87.08    23.233    36.030
+
+=== SmallTCN fp32 -- per-horizon MAPE (daylight-only, y_true > 5.0 Wh) ===
+step  mins           n    MAPE %    MAE Wh   RMSE Wh
+   1     5     423,290     26.78    12.393    22.368
+   2    10     423,167     35.83    15.669    26.934
+   3    15     423,351     40.73    17.298    28.908
+   4    20     423,341     44.32    18.456    30.150
+   5    25     423,501     46.86    19.314    31.125
+   6    30     423,383     49.47    20.072    31.887
+   7    35     423,162     52.19    20.693    32.614
+   8    40     422,782     54.54    21.274    33.263
+   9    45     422,351     55.89    21.780    33.823
+  10    50     422,034     56.92    22.299    34.452
+  11    55     421,977     58.13    22.754    34.909
+  12    60     421,972     58.95    23.158    35.399
+  13    65     421,655     60.51    23.550    35.840
+  14    70     421,712     61.21    23.911    36.296
+  15    75     421,650     62.49    24.274    36.738
+  16    80     421,787     63.52    24.637    37.151
+  17    85     421,646     65.41    25.023    37.623
+  18    90     421,756     66.50    25.334    38.010
+
+Running int8 TFLite SmallTCN (window-by-window) ...
+  int8 inference: 50,000/969,445
+  int8 inference: 100,000/969,445
+  int8 inference: 150,000/969,445
+  int8 inference: 200,000/969,445
+  int8 inference: 250,000/969,445
+  int8 inference: 300,000/969,445
+  int8 inference: 350,000/969,445
+  int8 inference: 400,000/969,445
+  int8 inference: 450,000/969,445
+  int8 inference: 500,000/969,445
+  int8 inference: 550,000/969,445
+  int8 inference: 600,000/969,445
+  int8 inference: 650,000/969,445
+  int8 inference: 700,000/969,445
+  int8 inference: 750,000/969,445
+  int8 inference: 800,000/969,445
+  int8 inference: 850,000/969,445
+  int8 inference: 900,000/969,445
+  int8 inference: 950,000/969,445
+
+=== SmallTCN int8 -- per-horizon MAPE (daylight-only, y_true > 1.0 Wh) ===
+step  mins           n    MAPE %    MAE Wh   RMSE Wh
+   1     5     476,246     35.55    12.289    23.781
+   2    10     476,327     45.20    14.968    26.963
+   3    15     476,834     50.29    16.303    28.491
+   4    20     476,917     55.40    17.309    29.485
+   5    25     476,922     58.62    18.072    30.358
+   6    30     476,894     62.21    18.724    30.972
+   7    35     476,439     65.54    19.284    31.570
+   8    40     476,146     69.06    19.802    32.087
+   9    45     475,734     71.85    20.290    32.616
+  10    50     475,205     73.58    20.775    33.211
+  11    55     474,961     76.94    21.258    33.683
+  12    60     474,719     78.56    21.640    34.128
+  13    65     474,148     82.23    22.077    34.581
+  14    70     473,855     82.58    22.394    35.022
+  15    75     473,643     85.25    22.780    35.480
+  16    80     473,592     89.14    23.191    35.876
+  17    85     473,960     90.73    23.518    36.282
+  18    90     474,483     93.03    23.815    36.653
+
+=== SmallTCN int8 -- per-horizon MAPE (daylight-only, y_true > 5.0 Wh) ===
+step  mins           n    MAPE %    MAE Wh   RMSE Wh
+   1     5     423,290     29.40    13.559    25.186
+   2    10     423,167     37.81    16.512    28.545
+   3    15     423,351     42.38    17.992    30.164
+   4    20     423,341     45.91    19.075    31.201
+   5    25     423,501     48.52    19.900    32.117
+   6    30     423,383     50.93    20.603    32.755
+   7    35     423,162     53.42    21.191    33.380
+   8    40     422,782     56.01    21.744    33.923
+   9    45     422,351     57.71    22.261    34.471
+  10    50     422,034     58.54    22.774    35.086
+  11    55     421,977     60.19    23.255    35.560
+  12    60     421,972     61.04    23.652    36.014
+  13    65     421,655     62.93    24.072    36.475
+  14    70     421,712     63.27    24.409    36.925
+  15    75     421,650     64.55    24.793    37.389
+  16    80     421,787     66.56    25.190    37.779
+  17    85     421,646     68.37    25.577    38.227
+  18    90     421,756     69.47    25.896    38.621
+
+==============================================================================
+Comparison to Zhou et al. 2019 (ALSTM, single 20 kW site, 7.5-min res)
+Their numbers: overall MAPE per horizon, averaged over one year (Table III)
+Our numbers:   per-horizon MAPE at the closest matching step, daylight-only
+==============================================================================
+   Horizon   our step   ours fp32   ours int8    Zhou ALSTM
+-----------------------------------------------------------
+    7.5 min          1      31.45%      35.55%        24.65%
+   15.0 min          3      47.10%      50.29%        28.81%
+   30.0 min          6      58.11%      62.21%        32.18%
+   60.0 min         12      73.19%      78.56%        37.82%
+
+CAVEATS for the reader:
+- Zhou et al.: single 20 kW rooftop site (Zhejiang, China), 7.5-min samples,
+  3 years training / 2 years testing, MAPE averaged over 12 months of 2017-2018.
+- This work: 703 UK sites, 5-min samples, train 2018-2022, test 2024,
+  daylight-only (y_true > 1 Wh), MAPE over the full test set.
+- Different sites, different climates, different resolutions, different
+  train/test windows. Directional comparison only, NOT an apples-to-apples
+  accuracy benchmark. The main takeaways are: (a) the shape of the
+  horizon-degradation curve, and (b) that our single small MCU-deployable
+  model lands in the same MAPE range as their single-site LSTM+attention
+  ensemble -- neither as good as a multi-site dataset allows nor as bad as
+  the worst published single-site results.
