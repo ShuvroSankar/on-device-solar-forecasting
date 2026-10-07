@@ -27,7 +27,7 @@
 | Quantize + deploy SmallTCN on both boards (Months 2–3) | ✅ Done (both boards, verified; int8 accuracy cost measured at +0.038 MASE) |
 | Quantize + deploy TTM (Months 2–3) | 🟡 Fine-tuned, exported, converted, and attempted on hardware. Does not fit on ESP32-C6 (§5.5–5.6) — documented negative result, not pending work |
 | Hardware benchmark vs TinyHAR-Net (Month 4) | ✅ SmallTCN vs TinyHAR-Net compared on the same STM32F446RE; see §7 and `thesis_artifacts/hardware_comparison_tinyhar.md`. TTM excluded (does not run on-device) |
-| Accuracy comparison vs published cloud models (Month 4) | 🟡 First paper extracted; needs per-horizon metrics computed on the SmallTCN test set |
+| Accuracy comparison vs published cloud models (Month 4) | ✅ First paper compared (Zhou et al. 2019, single-site ALSTM); full per-horizon + per-site breakdown in §7. Broader comparison across more published works remains open. |
 | MQTT network cost + live dashboard (Month 5) | ⬜ Waiting on solar panel |
 | Adaptive updating (TEDA-RLS) | ⬜ Not started |
 
@@ -211,7 +211,7 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
       30.12 KiB RAM. SmallTCN is 2.3–2.8× faster on the same MCU; the two models make
       opposite choices on int8 quantization, each justified by starting footprint. TTM
       excluded since it does not run on-device.
-- [ ] Accuracy comparison against the cited cloud-side PV forecasting results (needs care: different datasets, horizons and resolutions). **In progress:** first paper extracted (Zhou et al. 2019, ALSTM: single site, 7.5-min resolution, MAPE 24.65–37.82% across horizons). A direct comparison needs per-horizon MAPE computed on the SmallTCN test set.
+- [x] Accuracy comparison against the cited cloud-side PV forecasting results. First paper (Zhou et al. 2019) compared: SmallTCN fp32 MAPE at 5/15/30/60 min = 31.45 / 47.10 / 58.11 / 73.19% vs their 24.65 / 28.81 / 32.18 / 37.82%. Per-site breakdown across 276 test sites: median 28.45% at 5 min, best sites 23.2–24.2% (matching Zhou zero-shot). Long-horizon gap remains (best-site 60 min 55.38% vs Zhou 37.82%). Logs: `thesis_artifacts/smalltcn_per_horizon_mape_full.log`, `thesis_artifacts/smalltcn_per_site_mape.log`.
 - [ ] *(Possible follow-up, not committed to timeline)* If TTM remains in scope: re-export with a shorter context length to shrink the ≈2.9 MB linear-planner requirement, or evaluate ESP32-S3 with PSRAM as a larger target. The S3 has an FPU per ESP-IDF's capability headers, which would also address the compute concern from §5.5. Neither attempted yet.
 - [ ] When the solar panel is available: sensor → MCU → MQTT → dashboard, plus network cost measurements.
 - [ ] Adaptive updating (TEDA-RLS) — scope to be discussed given the overall workload.
