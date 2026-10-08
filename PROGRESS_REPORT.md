@@ -86,7 +86,7 @@ Notes:
 | Output vs reference model | rmse 0, cos 1.0 | max abs diff 0 (all 18 outputs and an intermediate tensor) |
 
 Comparison caveats:
-- The two boards use **different runtimes**. ST generates static C code; TFLite Micro interprets the model at run time. The 5.4× latency gap therefore cannot be attributed to the hardware alone. My guess is that ESP32-C6 uses portable reference int8 kernels, but I have not verified which kernels are active.
+- The two boards use **different runtimes**. ST generates static C code; TFLite Micro interprets the model at run time. The 5.4× latency gap therefore cannot be attributed to the hardware alone. My guess is that ESP32-C6 uses portable reference int8 kernels, but I have not verified which kernels are active. A like-for-like control run — the same TFLite Micro runtime on both boards — would separate the two effects, but the STM32F446RE's 128 KB SRAM cannot hold the 144 KiB arena the ESP32-C6 requires for correct output (§5.4), and no TFLite Micro port for this MCU exists in the project. The comparison is therefore reported as measured, with the confound stated rather than resolved.
 - The flash figures are not directly comparable. The ESP32 image includes the ESP-IDF framework; the STM32 figure covers only the AI runtime and weights. (The full STM32 validation image, including HAL and ST's validation stack, is 111 KB.)
 - The STM32 on-target check compares the generated C code against the TFLite reference on random inputs. It verifies **deployment fidelity, not forecast accuracy**.
 
@@ -242,7 +242,7 @@ Even an oracle linear predictor exploiting lag-1 structure would reduce MAE by a
 
 1. **Manual-dilation model:** the deployed graph is a rewrite of the trained model (identical math, different structure). Is this acceptable as the "SmallTCN" deployment, with the toolchain limitation documented as a finding?
 2. **Scope:** TTM does not fit on the ESP32-C6 (§5.5–5.6) — is the negative result, as documented, sufficient for the thesis, or is further follow-up (context-length reduction, ESP32-S3/PSRAM) expected within the remaining timeline?
-3. **Latency comparison:** the cross-board gap mixes hardware and runtime effects. Is it worth adding a like-for-like TFLite Micro run on the STM32 to separate the two?
+3. **Latency comparison — resolved as unfeasible, confirm framing is acceptable.** The cross-board gap mixes hardware and runtime effects. A like-for-like control (same TFLite Micro runtime on both boards) is not feasible: the F446RE's 128 KB SRAM cannot hold the 144 KiB arena the ESP32-C6 needs for correct output (§5.4), and no TFLite Micro port exists for this MCU. §5.1 now reports the comparison as measured with the confound stated. Is that sufficient, or would you prefer (a) an analytical hardware-vs-runtime decomposition, or (b) a reduced-context control (shorter input, same runtime both boards) at the cost of workload equivalence?
 4. **int8 accuracy cost interpretation:** the +0.038 MASE (+4.7%) cost is at the higher end of typical for a TCN. Two plausible mechanisms (small model size, manual dilation rewrite introducing more quantization breakpoints) are not separated by the current experiment. Should I invest in separating them, or is reporting the aggregate cost with the hypotheses noted sufficient?
 
 ---
