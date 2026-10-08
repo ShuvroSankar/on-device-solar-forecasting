@@ -1,0 +1,27 @@
+
+=== synthetic drift ===
+  n = 3000
+  Static    MAE=   0.9533   RMSE=   1.1898
+  TEDA-RLS  MAE=   0.7078   RMSE=   0.9501
+  Improvement: MAE +25.75%   RMSE +20.14%
+
+  Per-window (10 windows of ~300):
+   win   static MAE    corr. MAE    impr %
+     0       0.3666       0.3796     -3.55
+     1       0.4089       0.4191     -2.51
+     2       0.4009       0.4022     -0.33
+     3       1.1306       0.7303    +35.40
+     4       1.4931       0.6636    +55.55
+     5       1.4271       0.6209    +56.49
+     6       1.2591       0.7267    +42.29
+     7       0.9981       1.0240     -2.60
+     8       1.0213       1.0463     -2.45
+     9       1.0272       1.0654     -3.72
+
+  Clouds created: 68
+  Clouds merged : 60
+  Final #clouds : 8
+  Cloud means   : [-0.102, 1.297, -1.296, 2.275, -3.058, 3.104, -2.206, 3.824]
+  Cloud counts  : [1398, 1190, 146, 172, 18, 19, 56, 1]
+
+  Plot saved: teda_rls_diagnostics.png
