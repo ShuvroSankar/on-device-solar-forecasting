@@ -220,6 +220,23 @@ Even an oracle linear predictor exploiting lag-1 structure would reduce MAE by a
 
 ---
 
+### Baselines: persistence, climatology, and the horizon crossover
+
+Two reference baselines were computed on the full test set (969,445 windows from 279 sites) using the same window construction, daylight filter, and per-horizon metric as the SmallTCN evaluation:
+
+| Horizon | SmallTCN fp32 | Persistence | Climatology (month x hour) |
+|---|---|---|---|
+| 5 min | 31.45% | **24.75%** | 164.34% |
+| 15 min | **47.10%** | 47.70% | 164.73% |
+| 30 min | **58.11%** | 69.12% | 162.63% |
+| 60 min | **73.19%** | 105.98% | 161.95% |
+
+MAPE %, daylight-only (y_true > 1 Wh). Persistence = last observed generation. Climatology = per-(month, hour-of-day) mean capacity-normalized generation from the training split.
+
+**The crossover is between 5 and 15 min.** SmallTCN does not beat persistence at 5 min (+6.7 pt worse) — consistent with the known difficulty of very-short-horizon PV forecasting, where generation is highly autocorrelated. From 15 min onward SmallTCN overtakes persistence and the gap widens monotonically (60 min: 73.19% vs 105.98%). Climatology, which uses no current-condition information, is uniformly poor and serves only as a sanity check.
+
+**Implication for comparison against published work.** Zhou et al. report at 7.5 min, a horizon where our model is structurally weak. Their 7.5-min MAPE (24.65%) is persistence-level — a comparable MCU-scale model does not beat persistence there. At 15/30/60 min their numbers (28.81 / 32.18 / 37.82%) remain better than ours, but the comparison is then between a cloud-hosted model and a 40 KiB on-device one; the trade is accuracy for zero network round-trip and on-device inference on a sub-$10 MCU.
+
 ## 7. Next steps
 
 - [x] **Evaluate the int8 model on the full test set (MASE/MAE)** and compare with fp32. Done: int8 MASE 0.846 vs fp32 0.808 (+0.038, +4.7%). Full-test-set daylight cosine vs fp32: 0.971. See §5.3.
