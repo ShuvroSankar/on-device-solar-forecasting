@@ -12,9 +12,9 @@
 - A **SmallTCN** forecaster (38K parameters) is trained on the public UK PV dataset and **runs on both boards** (STM32F446RE and ESP32-C6) in int8, with on-device output matching the reference model **bit-exactly**.
 - On the test set it beats naive persistence: **fp32 MASE 0.808; deployed int8 MASE 0.846** — i.e. int8 quantization costs +0.038 MASE (+4.7% relative, MAE 9.95 → 10.42 Wh) on the full 969,445-window test set. That cost is now measured, not estimated (§5.3).
 - Getting a genuinely compressed int8 model onto the STM32 took a long investigation. The root cause was a **toolchain limitation with dilated convolutions**, fixed with a mathematically equivalent rewrite. After the fix: **40.7 KiB of weights, 18.2 ms per inference**.
-- The ESP32-C6 deployment initially produced *wrong* outputs. A debugging pass fixed it (details in §5.4), but **the RAM figure there is inflated** and the root-cause attribution is still unconfirmed.
+- The ESP32-C6 deployment initially produced *wrong* outputs. A debugging pass fixed it (details in §5.4); a follow-up ablation confirmed buffer reuse as the root cause, and the 144 KiB used footprint is now a measured correctness requirement, not an upper bound.
 - **TTM (Tiny Time Mixer) was fine-tuned, exported, converted, and attempted on the ESP32-C6.** The conversion chain (PyTorch → ONNX → TFLite float32) is fully parity-verified. Three quantization approaches (int8, int16x8, dynamic-range) were each tried and each ruled out for a distinct, confirmed, architectural reason (§5.5). The resulting float32 model was deployed to real ESP32-C6 hardware, where it loaded and began executing before faulting inside the `tflite-micro` greedy memory planner; the fallback (linear) planner would need roughly 2.9 MB of activation memory against the chip's 512 KB SRAM. The C6 also has **no hardware FPU**, so float32 inference there would be software-emulated even if it fit. **TTM does not fit on the ESP32-C6 in its current form** (§5.6). This is a complete, evidence-backed negative result, not an unfinished one. SmallTCN remains the deployed model on both boards.
-- **Not yet done:** the ESP32 buffer-reuse ablation, the hardware and accuracy comparison tables against published works (extraction in progress, §7), MQTT/dashboard work (waiting on the solar panel), and adaptive updating (TEDA-RLS).
+- **Not yet done:** broader accuracy comparison beyond Zhou et al. 2019 (§7); MQTT/dashboard work (waiting on the solar panel). Completed work is tracked in the §2 status table; the TEDA-RLS adaptation study is closed as a documented negative result (§5.7).
 
 ---
 
@@ -29,7 +29,7 @@
 | Hardware benchmark vs TinyHAR-Net (Month 4) | ✅ SmallTCN vs TinyHAR-Net compared on the same STM32F446RE; see §7 and `thesis_artifacts/hardware_comparison_tinyhar.md`. TTM excluded (does not run on-device) |
 | Accuracy comparison vs published cloud models (Month 4) | ✅ First paper compared (Zhou et al. 2019, single-site ALSTM); full per-horizon + per-site breakdown in §7. Broader comparison across more published works remains open. |
 | MQTT network cost + live dashboard (Month 5) | ⬜ Waiting on solar panel |
-| Adaptive updating (TEDA-RLS) | ⬜ Not started |
+| Adaptive updating (TEDA-RLS) | ✅ Evaluated — negative result (§5.7): residuals white at both horizons (lag-1 rho ≤ 0.066), no exploitable drift |
 
 ---
 
@@ -127,11 +127,11 @@ Daylight-only cosine similarity between int8 and fp32 predictions: **0.971**, co
 
 **Symptom.** The first run gave outputs that drifted smoothly away from the reference (up to 36 int8 units by the last forecast step), even though the same `.tflite` file matched exactly on STM32.
 
-**What fixed it.** Two changes were made at the same time: `preserve_all_tensors=true` on the interpreter and a larger arena (80 KiB → 176 KiB). After both, output and an intermediate tensor matched bit-exactly.
+**What fixed it.** Two changes were made at the same time: `preserve_all_tensors=true` on the interpreter and a larger arena (176 KiB reserved, up from the 80 KiB used in the debug build). After both, output and an intermediate tensor matched bit-exactly.
 
-**What is not established.** I suspect the cause is TFLite Micro's memory planner reusing buffers that this graph (many parallel branches reading one padded tensor) still needs. **This is an inference, not a confirmed cause**, because both settings changed together. `preserve_all_tensors=true` disables buffer reuse, which is why the arena is 144 KiB instead of roughly the 16 KiB STM32 needs. The reported ESP32 RAM figure is therefore **an upper bound, not the model's true requirement.**
+**Confirmed by ablation.** The original fix toggled two things at once (`preserve_all_tensors` and arena size), so the causal attribution was hypothesis, not proof. A controlled on-device ablation was run: keep the arena at 176 KiB, flip `preserve_all_tensors` to `false`, re-run. The output reproduces the original 36-int8-unit drift exactly. Two settings were toggled together originally, but flipping only `preserve_all_tensors` on its own is enough to reproduce the failure. Buffer reuse is therefore confirmed as the cause, not inferred.
 
-**Planned ablation:** keep the 176 KiB arena and set `preserve_all_tensors=false`. If the output breaks, buffer reuse is confirmed. If it stays correct, the arena size was the issue and RAM can be shrunk substantially.
+**Quantified cost of the fix.** Buffer reuse shrinks the arena from 147,836 B to 37,164 B (a 75% reduction, 110 KB) but produces wrong output. The 144 KiB *used* footprint (of the 176 KiB reserved arena, per the device log) is a genuine requirement for correctness on this toolchain, not an inflated upper bound. The RAM figure in §5.1 stands as measured (log: `thesis_artifacts/smalltcn_esp32_ablation.log`).
 
 ---
 
@@ -177,6 +177,25 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
 
 ---
 
+### 5.7 Finding 4 — Online adaptation (TEDA-RLS): evaluated, not justified
+
+A TEDA-RLS residual corrector was prototyped offline in Python (~250 lines: `thesis_artifacts/teda_rls_prototype.py`) to test whether online learning could recover accuracy lost to concept drift. The design follows the published TEDA-RLS algorithm: residual samples are clustered into DataClouds by recursive eccentricity, and each cloud carries its own RLS filter with a forgetting factor. The corrector predicts the static SmallTCN's next residual from the last W residuals; the final forecast is `SmallTCN(x) + corrector(residuals)`.
+
+**Algorithm validated on synthetic drift.** On injected mean- and variance-drift, the corrector reduced MAE by 25.8% and RMSE by 20.1%, with per-window improvements of +35% to +56% during drift regimes and ~0% elsewhere. The algorithm works as specified (`thesis_artifacts/teda_rls_synthetic_test.log`).
+
+**Not justified on real residuals.** Evaluated on the highest-traffic test site (16,009 windows from site 16921; 7,702 daylight samples at 5-min horizon, 7,701 at 30-min), the corrector degraded MAE. A residual autocorrelation analysis explains why:
+
+| Horizon | lag-1 rho | Implied MAE ceiling |
+|---|---|---|
+| 5 min | -0.015 | ~0% |
+| 30 min | +0.066 | ~0.4% |
+
+Even an oracle linear predictor exploiting lag-1 structure would reduce MAE by at most 0.4% at the longer horizon and by nothing at the shorter one. Residual kurtosis is 7.2 (Gaussian = 3.0), indicating errors are dominated by heavy-tailed, unpredictable weather variance rather than systematic drift. Rolling 500-sample means across the test period vary by less than 1.5x the per-sample standard deviation -- consistent with sampling noise, not drift.
+
+**Conclusion.** Online residual adaptation is not warranted on this dataset at these horizons. The static SmallTCN's short-horizon errors are aleatoric, not systematic; there is no bias for an adaptive layer to track. Further work would require substantially longer horizons or exogenous features (temperature, cloud cover, humidity) not present in the current 5-channel input.
+
+**Log:** `thesis_artifacts/teda_rls_prototype.py`, `thesis_artifacts/residuals_site16921.csv`, `thesis_artifacts/teda_rls_synthetic_test.log`.
+
 ## 6. What is verified vs. not yet verified
 
 | Claim | Verified? |
@@ -192,8 +211,9 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
 | TTM dynamic-range quantization is numerically valid | ✅ parity-checked (0.49% relative error vs. ONNX) |
 | TTM does not fit on the ESP32-C6 | ✅ measured on hardware: store access fault in the greedy planner; linear planner's real requirement (≈2.9 MB) measured directly |
 | ESP32-C6 has no hardware FPU | ✅ confirmed via ESP-IDF `soc_caps.h` (no `SOC_CPU_HAS_FPU` for esp32c6) |
+| TEDA-RLS online adaptation justified on this dataset | ❌ **No** — evaluated with a working prototype; residuals are white at both horizons (lag-1 rho <= 0.066), kurtosis 7.2. See §5.7 |
 | Greedy-planner fault is caused by a tensor appearing twice in the graph | ❌ hypothesis; fault type/location measured, mechanism not isolated |
-| ESP32 SmallTCN root cause is buffer reuse | ❌ hypothesis, ablation pending |
+| ESP32 SmallTCN root cause is buffer reuse | ✅ confirmed by ablation: 36-int8-unit drift reproduced by flipping `preserve_all_tensors` alone |
 | ESP32 slowdown is due to lack of SIMD / reference kernels | ❌ hypothesis |
 | Errors are dominated by cloud variability | ❌ hypothesis |
 | int8 quantization cost is at the higher end of typical because of small model size + manual dilation rewrite | ❌ hypothesis, two plausible mechanisms not separated |
@@ -203,7 +223,7 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
 ## 7. Next steps
 
 - [x] **Evaluate the int8 model on the full test set (MASE/MAE)** and compare with fp32. Done: int8 MASE 0.846 vs fp32 0.808 (+0.038, +4.7%). Full-test-set daylight cosine vs fp32: 0.971. See §5.3.
-- [ ] ESP32 ablation (`preserve_all_tensors=false`) to confirm root cause and recover RAM.
+- [x] ESP32 buffer-reuse ablation. Flipped `preserve_all_tensors` to `false` with arena unchanged. Result: buffer reuse reproduces the original 36-int8-unit output drift exactly — confirmed as the cause of the incorrect output. Arena shrinks from 147,836 B to 37,164 B with reuse enabled (−75%) but output is wrong. The 144 KiB used footprint (§5.1) is a confirmed requirement for correctness, not an upper bound. Log: `thesis_artifacts/smalltcn_esp32_ablation.log`.
 - [x] Fine-tune **TTM** on the solar data, compress it, and deploy it. Done: fine-tuned, exported, converted, and attempted on ESP32-C6 hardware. TTM does not fit — three quantization approaches ruled out, and the float32 model is blocked by the planner fault and the ≈2.9 MB linear footprint (§5.5–5.6). No further deployment work planned against TTM-on-ESP32-C6 unless scope changes.
 - [x] Hardware comparison table vs TinyHAR-Net (both on STM32F446RE). Full comparison in
       `thesis_artifacts/hardware_comparison_tinyhar.md`. SmallTCN: 40.7 KiB flash (int8),
@@ -214,7 +234,7 @@ TTM's true activation footprint without buffer reuse is roughly 2.9 MB — about
 - [x] Accuracy comparison against the cited cloud-side PV forecasting results. First paper (Zhou et al. 2019) compared: SmallTCN fp32 MAPE at 5/15/30/60 min = 31.45 / 47.10 / 58.11 / 73.19% vs their 24.65 / 28.81 / 32.18 / 37.82%. Per-site breakdown across 276 test sites: median 28.45% at 5 min, best sites 23.2–24.2% (matching Zhou zero-shot). Long-horizon gap remains (best-site 60 min 55.38% vs Zhou 37.82%). Logs: `thesis_artifacts/smalltcn_per_horizon_mape_full.log`, `thesis_artifacts/smalltcn_per_site_mape.log`.
 - [ ] *(Possible follow-up, not committed to timeline)* If TTM remains in scope: re-export with a shorter context length to shrink the ≈2.9 MB linear-planner requirement, or evaluate ESP32-S3 with PSRAM as a larger target. The S3 has an FPU per ESP-IDF's capability headers, which would also address the compute concern from §5.5. Neither attempted yet.
 - [ ] When the solar panel is available: sensor → MCU → MQTT → dashboard, plus network cost measurements.
-- [ ] Adaptive updating (TEDA-RLS) — scope to be discussed given the overall workload.
+- [x] Adaptive updating (TEDA-RLS). Prototype built and validated on synthetic drift (+26% MAE), then evaluated on real residuals (site 16921). Residuals are white at 5-min and 30-min horizons (lag-1 rho = -0.015 and +0.066); no exploitable structure for an online corrector. Documented negative result in §5.7. Artifacts: `thesis_artifacts/teda_rls_prototype.py`, `thesis_artifacts/residuals_site16921.csv`.
 
 ---
 
