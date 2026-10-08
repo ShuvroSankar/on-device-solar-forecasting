@@ -23,3 +23,7 @@ exports/
 
 # Obsolete
 preprocess_ukpv.py.broken
+*.bak
+*.bak[0-9]
+*.bak_*
+*.old
